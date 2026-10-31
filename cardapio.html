@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pizzaria Gabryelle Prime Music - Cardápio Digital</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Generator Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            red: '#8B0000',
+                            darkRed: '#5B0000',
+                            gold: '#D4AF37',
+                            goldHover: '#B59227',
+                            dark: '#121212',
+                            cardBg: '#1A1A1A'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0d0d0d;
+            color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; color: black !important; }
+        }
+    </style>
+</head>
+<body class="pb-28">
+
+    <!-- CABEÇALHO -->
+    <header class="bg-gradient-to-b from-brand-darkRed to-brand-dark border-b border-brand-gold/30 p-4 sticky top-0 z-30 shadow-xl">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-brand-gold/20 border-2 border-brand-gold flex items-center justify-center text-brand-gold font-bold text-xl shadow-lg">
+                    🍕
+                </div>
+                <div>
+                    <h1 class="text-lg font-extrabold tracking-wide text-white leading-tight">GABRYELLE PRIME</h1>
+                    <p class="text-xs text-brand-gold flex items-center gap-1 font-semibold">
+                        <i class="fa-solid fa-music text-[10px]"></i> PIZZARIA & MUSIC
+                    </p>
+                </div>
+            </div>
+
+            <!-- MESA BADGE -->
+            <div id="mesaBadge" onclick="solicitarMesa()" class="bg-brand-gold text-brand-dark font-extrabold px-3 py-1.5 rounded-full text-xs flex items-center gap-1.5 shadow-lg cursor-pointer hover:bg-yellow-400 transition-all">
+                <i class="fa-solid fa-chair"></i>
+                <span id="mesaLabelText">MESA --</span>
+                <i class="fa-solid fa-pen text-[10px]"></i>
+            </div>
+        </div>
+
+        <!-- ALERTA PROMOÇÃO DO DIA -->
+        <div id="promoBanner" class="max-w-md mx-auto mt-3 bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between shadow-md">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-fire text-brand-darkRed animate-bounce"></i>
+                <span id="promoBannerText">PROMO QUARTA E QUINTA ATIVA!</span>
+            </div>
+            <button onclick="togglePromoManual()" class="bg-black/20 hover:bg-black/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold text-slate-900 border border-black/20">
+                Alternar
+            </button>
+        </div>
+    </header>
+
+    <!-- CONTAINER PRINCIPAL -->
+    <main class="max-w-md mx-auto p-4 space-y-6">
+
+        <!-- NAVEGAÇÃO DE CATEGORIAS -->
+        <nav class="flex gap-2 overflow-x-auto hide-scrollbar py-1 text-xs font-semibold sticky top-[108px] z-20 bg-brand-dark/95 backdrop-blur-md">
+            <button onclick="filtrarCategoria('pizzas')" id="cat-pizzas" class="cat-btn bg-brand-gold text-brand-dark px-3.5 py-2 rounded-full whitespace-nowrap transition-all shadow-md font-bold">
+                🍕 Pizzas
+            </button>
+            <button onclick="filtrarCategoria('massas')" id="cat-massas" class="cat-btn bg-brand-cardBg text-gray-300 px-3.5 py-2 rounded-full whitespace-nowrap transition-all border border-gray-800">
+                🍝 Massas
+            </button>
+            <button onclick="filtrarCategoria('petiscos')" id="cat-petiscos" class="cat-btn bg-brand-cardBg text-gray-300 px-3.5 py-2 rounded-full whitespace-nowrap transition-all border border-gray-800">
+                🍟 Petiscos
+            </button>
+            <button onclick="filtrarCategoria('cervejas')" id="cat-cervejas" class="cat-btn bg-brand-cardBg text-gray-300 px-3.5 py-2 rounded-full whitespace-nowrap transition-all border border-gray-800">
+                🍺 Cervejas
+            </button>
+            <button onclick="filtrarCategoria('drinks')" id="cat-drinks" class="cat-btn bg-brand-cardBg text-gray-300 px-3.5 py-2 rounded-full whitespace-nowrap transition-all border border-gray-800">
+                🍹 Drinks
+            </button>
+            <button onclick="filtrarCategoria('destilados')" id="cat-destilados" class="cat-btn bg-brand-cardBg text-gray-300 px-3.5 py-2 rounded-full whitespace-nowrap transition-all border border-gray-800">
+                🥃 Whiskies & Destilados
+            </button>
+            <button onclick="filtrarCategoria('bebidas')" id="cat-bebidas" class="cat-btn bg-brand-cardBg text-gray-300 px-3.5 py-2 rounded-full whitespace-nowrap transition-all border border-gray-800">
+                🥤 Sem Álcool
+            </button>
+            <button onclick="abrirModalAdminQR()" class="bg-gray-800 text-brand-gold px-3 py-2 rounded-full whitespace-nowrap transition-all border border-brand-gold/40 text-xs flex items-center gap-1">
+                <i class="fa-solid fa-qrcode"></i> QR Mesas
+            </button>
+        </nav>
+
+        <!-- SEÇÃO: PIZZAS MONTAGEM -->
+        <section id="sec-pizzas" class="space-y-4">
+            <div class="bg-brand-cardBg border border-brand-gold/20 rounded-2xl p-4 shadow-xl">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <span class="text-brand-gold">1.</span> Escolha o Tamanho da Pizza
+                    </h2>
+                </div>
+                <p class="text-xs text-gray-400 mb-3">Selecione o tamanho para liberar os sabores e bordas:</p>
+
+                <div class="grid grid-cols-2 gap-2" id="tamanhosContainer">
+                    <!-- Gerado Dinamicamente -->
+                </div>
+            </div>
+
+            <div id="saboresSection" class="bg-brand-cardBg border border-gray-800 rounded-2xl p-4 shadow-xl opacity-50 pointer-events-none transition-all">
+                <div class="flex items-center justify-between mb-3 border-b border-gray-800 pb-2">
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <span class="text-brand-gold">2.</span> Selecione os Sabores
+                        </h2>
+                        <p class="text-xs text-brand-gold font-medium" id="saboresStatus">Selecione o tamanho primeiro</p>
+                    </div>
+                    <span id="saboresContador" class="text-xs bg-brand-gold/20 text-brand-gold px-2.5 py-1 rounded-full font-bold border border-brand-gold/30">
+                        0/0
+                    </span>
+                </div>
+
+                <!-- LISTA DE SABORES SELECIONADOS -->
+                <div id="saboresSelecionadosBox" class="hidden mb-4 p-2.5 bg-black/40 rounded-xl border border-brand-gold/30">
+                    <p class="text-[11px] text-gray-400 font-semibold mb-1 uppercase">Sabores na Pizza:</p>
+                    <div id="saboresTags" class="flex flex-wrap gap-1.5"></div>
+                </div>
+
+                <!-- BUSCA DE SABORES -->
+                <div class="relative mb-3">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-500 text-xs"></i>
+                    <input type="text" id="inputBuscaSabor" oninput="buscarSabores()" placeholder="Buscar sabor de pizza..." class="w-full bg-black/50 text-white pl-8 pr-3 py-2 rounded-xl text-xs border border-gray-800 focus:outline-none focus:border-brand-gold">
+                </div>
+
+                <!-- LISTA DE SABORES PARA SELEÇÃO -->
+                <div id="listaSabores" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    <!-- Gerado dinamicamente -->
+                </div>
+
+                <!-- BORDA E ACRÉSCIMOS OPCIONAIS -->
+                <div class="mt-4 pt-3 border-t border-gray-800 space-y-3">
+                    <h3 class="text-xs font-bold text-brand-gold uppercase">Borda Recheada ou Acréscimos (Opcional)</h3>
+                    <select id="bordaPizzaSelect" class="w-full bg-black/50 text-xs text-white p-2.5 rounded-xl border border-gray-800 focus:outline-none focus:border-brand-gold">
+                        <option value="">Sem Borda Recheada</option>
+                        <option value="Borda de Catupiry">Borda de Catupiry</option>
+                        <option value="Borda de Cheddar">Borda de Cheddar</option>
+                        <option value="Acréscimo de Azeitona">Acréscimo de Azeitona</option>
+                        <option value="Acréscimo de Catupiry">Acréscimo de Catupiry</option>
+                        <option value="Acréscimo de Cebola">Acréscimo de Cebola</option>
+                        <option value="Acréscimo de Cheddar">Acréscimo de Cheddar</option>
+                        <option value="Acréscimo de Milho">Acréscimo de Milho</option>
+                        <option value="Acréscimo de Palmito">Acréscimo de Palmito</option>
+                        <option value="Acréscimo de Tomate">Acréscimo de Tomate</option>
+                        <option value="Acréscimo de Queijo Extra">Acréscimo de Queijo Extra</option>
+                    </select>
+
+                    <div>
+                        <label class="text-xs font-semibold text-gray-300 block mb-1">Observações da Pizza (Opcional):</label>
+                        <input type="text" id="obsPizza" placeholder="Ex: Sem cebola, massa bem assada..." class="w-full bg-black/50 text-xs text-white px-3 py-2 rounded-xl border border-gray-800 focus:outline-none focus:border-brand-gold">
+                    </div>
+                </div>
+
+                <button onclick="adicionarPizzaAoCarrinho()" id="btnAddPizza" disabled class="w-full mt-4 bg-gray-700 text-gray-400 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all">
+                    Adicionar Pizza ao Pedido
+                </button>
+            </div>
+        </section>
+
+        <!-- SEÇÃO: MASSAS -->
+        <section id="sec-massas" class="space-y-3 hidden">
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Massas & Pratos</h2>
+            <div id="listaMassas" class="space-y-3">
+                <!-- Gerado via JS -->
+            </div>
+        </section>
+
+        <!-- SEÇÃO: PETISCOS -->
+        <section id="sec-petiscos" class="space-y-3 hidden">
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Petiscos & Porções</h2>
+            <div id="listaPetiscos" class="space-y-2.5">
+                <!-- Gerado via JS -->
+            </div>
+        </section>
+
+        <!-- SEÇÃO: CERVEJAS -->
+        <section id="sec-cervejas" class="space-y-3 hidden">
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Cervejas Geladas</h2>
+            <div id="listaCervejas" class="space-y-2.5">
+                <!-- Gerado via JS -->
+            </div>
+        </section>
+
+        <!-- SEÇÃO: DRINKS -->
+        <section id="sec-drinks" class="space-y-3 hidden">
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Drinks & Coquetéis</h2>
+            <div id="listaDrinks" class="space-y-2.5">
+                <!-- Gerado via JS -->
+            </div>
+        </section>
+
+        <!-- SEÇÃO: WHISKIES & DESTILADOS -->
+        <section id="sec-destilados" class="space-y-3 hidden">
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Whiskies & Destilados</h2>
+            <div id="listaDestilados" class="space-y-2.5">
+                <!-- Gerado via JS -->
+            </div>
+        </section>
+
+        <!-- SEÇÃO: BEBIDAS SEM ÁLCOOL -->
+        <section id="sec-bebidas" class="space-y-3 hidden">
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Sucos & Sem Álcool</h2>
+            <div id="listaBebidas" class="space-y-2.5">
+                <!-- Gerado via JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- BARRA FIXA DO CARRINHO (INFERIOR) -->
+    <div class="fixed bottom-0 left-0 right-0 z-30 p-4 bg-gradient-to-t from-black via-black/95 to-transparent">
+        <div class="max-w-md mx-auto">
+            <button onclick="abrirModalCarrinho()" class="w-full bg-gradient-to-r from-brand-gold to-yellow-500 hover:from-yellow-500 hover:to-brand-gold text-brand-dark font-extrabold p-3.5 rounded-2xl shadow-2xl flex items-center justify-between transition-all active:scale-[0.98]">
+                <div class="flex items-center gap-2.5">
+                    <span id="carrinhoQtdBadge" class="bg-brand-dark text-brand-gold w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold">0</span>
+                    <span class="text-sm tracking-wide uppercase">Ver Pedido da Mesa</span>
+                </div>
+                <div class="text-right">
+                    <span id="carrinhoTotalBarra" class="text-base font-black">R$ 0,00</span>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL MESA -->
+    <div id="modalMesa" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-brand-cardBg border border-brand-gold/40 rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4">
+            <div class="text-center">
+                <div class="w-12 h-12 bg-brand-gold/20 text-brand-gold rounded-full flex items-center justify-center mx-auto text-2xl mb-2">
+                    <i class="fa-solid fa-chair"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white">Número da Mesa</h3>
+                <p class="text-xs text-gray-400 mt-1">Informe o número da mesa onde você está sentado.</p>
+            </div>
+            <input type="number" id="inputNumeroMesa" placeholder="Ex: 05" class="w-full bg-black text-center text-2xl font-black text-brand-gold py-3 rounded-xl border-2 border-brand-gold/50 focus:outline-none focus:border-brand-gold">
+            <button onclick="salvarMesaDigitada()" class="w-full bg-brand-gold text-brand-dark font-extrabold py-3 rounded-xl text-sm uppercase">
+                Confirmar Mesa
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL CARRINHO / CHECKOUT -->
+    <div id="modalCarrinho" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex justify-end flex-col hidden">
+        <div class="bg-brand-cardBg border-t-2 border-brand-gold/50 rounded-t-3xl p-5 max-w-md w-full mx-auto max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-basket-shopping text-brand-gold"></i> Seu Pedido
+                    </h3>
+                    <p class="text-xs text-brand-gold font-bold" id="carrinhoMesaHeader">MESA: --</p>
+                </div>
+                <button onclick="fecharModalCarrinho()" class="text-gray-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div id="carrinhoItensList" class="my-4 overflow-y-auto space-y-3 pr-1 flex-1">
+                <!-- Inserido dinamicamente -->
+            </div>
+
+            <div class="space-y-3 pt-3 border-t border-gray-800">
+                <div>
+                    <label class="text-xs text-gray-300 font-semibold block mb-1">Seu Nome (Opcional):</label>
+                    <input type="text" id="clienteNome" placeholder="Ex: Lucas" class="w-full bg-black text-xs text-white p-2.5 rounded-xl border border-gray-800 focus:outline-none focus:border-brand-gold">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs text-gray-300 font-semibold block mb-1">Forma de Pagamento:</label>
+                        <select id="formaPagamento" onchange="toggleTrocoInput()" class="w-full bg-black text-xs text-white p-2.5 rounded-xl border border-gray-800 focus:outline-none focus:border-brand-gold">
+                            <option value="Pix">PIX</option>
+                            <option value="Cartão de Crédito/Débito">Cartão na Mesa</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                        </select>
+                    </div>
+                    <div id="trocoContainer" class="hidden">
+                        <label class="text-xs text-gray-300 font-semibold block mb-1">Troco para Quanto?</label>
+                        <input type="text" id="trocoValor" placeholder="Ex: R$ 50,00" class="w-full bg-black text-xs text-white p-2.5 rounded-xl border border-gray-800 focus:outline-none focus:border-brand-gold">
+                    </div>
+                </div>
+
+                <div class="bg-black/60 p-3 rounded-xl space-y-1">
+                    <div class="flex justify-between text-xs text-gray-400">
+                        <span>Subtotal:</span>
+                        <span id="checkoutSubtotal">R$ 0,00</span>
+                    </div>
+                    <div class="flex justify-between text-sm font-black text-brand-gold pt-1 border-t border-gray-800">
+                        <span>Total do Pedido:</span>
+                        <span id="checkoutTotal">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <button onclick="enviarPedidoWhatsApp()" class="w-full bg-green-600 hover:bg-green-500 text-white font-extrabold py-3.5 rounded-xl text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-green-900/40">
+                    <i class="fa-brands fa-whatsapp text-lg"></i> Enviar Pedido para o Garçom
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GERADOR QR CODE -->
+    <div id="modalAdminQR" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-brand-cardBg border border-brand-gold/40 rounded-2xl p-5 w-full max-w-md shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                <h3 class="text-sm font-bold text-brand-gold flex items-center gap-2">
+                    <i class="fa-solid fa-qrcode"></i> Gerador de QR Code por Mesa
+                </h3>
+                <button onclick="fecharModalAdminQR()" class="text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-gray-400">Gere códigos QR para colar nas mesas. Ao escanear, a mesa será selecionada automaticamente no celular do cliente!</p>
+
+            <div class="space-y-2">
+                <label class="text-xs text-gray-300 font-semibold block">Número da Mesa:</label>
+                <div class="flex gap-2">
+                    <input type="number" id="qrMesaInput" placeholder="Ex: 1" value="1" class="w-full bg-black text-white px-3 py-2 rounded-xl border border-gray-800 text-sm">
+                    <button onclick="gerarQRCodeUnico()" class="bg-brand-gold text-brand-dark px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap">
+                        Gerar QR
+                    </button>
+                </div>
+            </div>
+
+            <div id="qrSingleDisplay" class="flex flex-col items-center justify-center p-4 bg-white rounded-2xl hidden">
+                <div id="qrcodeCanvas"></div>
+                <p id="qrMesaTextDisplay" class="text-black font-extrabold text-sm mt-2">MESA 01</p>
+                <p class="text-[10px] text-gray-600">Pizzaria Gabryelle Prime</p>
+            </div>
+
+            <div class="pt-2 border-t border-gray-800 flex justify-between gap-2">
+                <button onclick="gerarEImprimirVariasMesas()" class="w-full bg-gray-800 hover:bg-gray-700 text-brand-gold border border-brand-gold/30 text-xs py-2.5 rounded-xl font-bold">
+                    <i class="fa-solid fa-print"></i> Imprimir Lote (Mesas 1 a 10)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT DA APLICAÇÃO -->
+    <script>
+        const ZAP_PHONE = "5577991663151"; 
+
+        // --- TODOS OS SABORES DE PIZZA ---
+        const SABORES_PIZZAS = [
+            { id: "a_moda", nome: "A Moda", ing: "Mussarela, ovo, frango, milho e bacon" },
+            { id: "aeroporto", nome: "Aeroporto", ing: "Mussarela, alho desidratado, champignon e tomate rodela" },
+            { id: "americana", nome: "Americana", ing: "Milho, bacon, cebola e mussarela" },
+            { id: "argentina", nome: "Argentina", ing: "Mussarela, tomate, parmesão e azeitona" },
+            { id: "atum", nome: "Atum", ing: "Mussarela e atum" },
+            { id: "bacalhau", nome: "Bacalhau", ing: "Bacalhau, mussarela e azeitona" },
+            { id: "bacon", nome: "Bacon", ing: "Mussarela e bacon" },
+            { id: "bauru", nome: "Bauru", ing: "Mussarela, presunto e rodelas de tomate" },
+            { id: "brasileira", nome: "Brasileira", ing: "Mussarela, atum, azeitona, cebola e milho" },
+            { id: "calabresa", nome: "Calabresa", ing: "Mussarela e calabresa" },
+            { id: "calabresa_acebolada", nome: "Calabresa Acebolada", ing: "Mussarela, calabresa e cebola" },
+            { id: "calamito", nome: "Calamito", ing: "Calabresa, palmito, milho, mussarela e catupiry" },
+            { id: "camarao", nome: "Camarão", ing: "Azeitona, mussarela, cebola e camarão" },
+            { id: "carioca", nome: "Carioca", ing: "Mussarela, calabresa, bacon, catupiry e cebola" },
+            { id: "catupiry", nome: "Catupiry", ing: "Mussarela e catupiry" },
+            { id: "espanhola", nome: "Espanhola", ing: "Presunto, calabresa, palmito, azeitona, tomate e mussarela" },
+            { id: "strogonoff", nome: "Strogonofe de Frango", ing: "Mussarela, frango em cubos, milho, creme de leite e batata palha" },
+            { id: "frango", nome: "Frango", ing: "Mussarela e frango" },
+            { id: "frango_catupiry", nome: "Frango com Catupiry", ing: "Mussarela, frango e catupiry" },
+            { id: "gabryelle", nome: "Gabryelle", ing: "Mussarela, frango, creme de leite e milho" },
+            { id: "lombinho", nome: "Lombinho", ing: "Mussarela e lombinho" },
+            { id: "lombinho_catupiry", nome: "Lombinho com Catupiry", ing: "Mussarela, lombinho e catupiry" },
+            { id: "lombinho_prime", nome: "Lombinho Prime", ing: "Mussarela, lombinho, bacon, cheddar e barbecue" },
+            { id: "mexicana", nome: "Mexicana", ing: "Carne moída, pimenta desidratada, calabresa, tomate e mussarela" },
+            { id: "milho", nome: "Milho", ing: "Mussarela e milho" },
+            { id: "mussarela", nome: "Mussarela", ing: "Mussarela, tomate e cebola" },
+            { id: "napolitana", nome: "Napolitana", ing: "Mussarela, palmito, milho, azeitona e presunto" },
+            { id: "nordestina", nome: "Nordestina", ing: "Mussarela, carne seca, cebola e banana" },
+            { id: "palmito", nome: "Palmito", ing: "Mussarela e palmito" },
+            { id: "paulistinha", nome: "Paulistinha", ing: "Frango desfiado, bacon e cheddar" },
+            { id: "peito_peru", nome: "Peito de Peru", ing: "Mussarela e peito de peru" },
+            { id: "peito_peru_catupiry", nome: "Peito de Peru com Catupiry", ing: "Mussarela, peito de peru e catupiry" },
+            { id: "portuguesa", nome: "Portuguesa", ing: "Mussarela, presunto, palmito, ovo e azeitona" },
+            { id: "quatro_queijos", nome: "Quatro Queijos", ing: "Mussarela, gorgonzola, provolone e catupiry" },
+            { id: "romana", nome: "Romana", ing: "Mussarela, calabresa, ovo, presunto e azeitona" },
+            { id: "salaminho", nome: "Salaminho", ing: "Mussarela, salame e azeitona" },
+            { id: "siciliana", nome: "Siciliana", ing: "Bacon, azeitona, cebola, mussarela e champignon" },
+            { id: "suprema", nome: "Suprema", ing: "Mussarela, carne desfiada, catupiry e barbecue" },
+            { id: "texa", nome: "Texa", ing: "Mussarela, frango, bacon e molho barbecue" },
+            { id: "tomate_seco", nome: "Tomate Seco", ing: "Tomate seco e catupiry" },
+            { id: "tropically", nome: "Tropically", ing: "Frango, abacaxi, mussarela e milho" },
+            { id: "seis_queijos", nome: "6 Queijos Prime", ing: "Mussarela, provolone, gorgonzola, parmesão, cheddar e catupiry" },
+            // DOCES
+            { id: "doce_banana", nome: "Banana (Doce)", ing: "Mussarela, banana, canela em pó e catupiry" },
+            { id: "doce_brigadeiro", nome: "Brigadeiro (Doce)", ing: "Chocolate, granulado e mussarela" },
+            { id: "doce_nutella", nome: "Nutella (Doce)", ing: "Nutella, banana e mussarela" },
+            { id: "doce_romeu", nome: "Romeu e Julieta (Doce)", ing: "Goiabada, mussarela e creme de leite" }
+        ];
+
+        // --- MASSAS DO CARDÁPIO FÍSICO ---
+        const MASSAS = [
+            { id: "m1", nome: "Lasanha Bolonhesa", preco: 28.00, desc: "Acompanha Arroz, Purê ou Macarrão" },
+            { id: "m2", nome: "Lasanha de Frango Catupiry", preco: 28.00, desc: "Acompanha Arroz, Purê ou Macarrão" },
+            { id: "m3", nome: "Lasanha de Presunto", preco: 28.00, desc: "Acompanha Arroz, Purê ou Macarrão" },
+            { id: "m4", nome: "Espaguete à Bolonhesa", preco: 26.00, desc: "Acompanha Arroz, Purê ou Macarrão" },
+            { id: "m5", nome: "Escondidinho de Carne", preco: 30.00, desc: "Acompanha Arroz, Purê ou Macarrão" },
+            { id: "m6", nome: "Parmegiana de Frango", preco: 32.00, desc: "Acompanha Arroz, Purê ou Macarrão" },
+            { id: "m7", nome: "Parmegiana de Carne", preco: 36.00, desc: "Acompanha Arroz, Purê ou Macarrão" }
+        ];
+
+        // --- PETISCOS COMPLETOS ---
+        const PETISCOS = [
+            { id: "p1", nome: "Batata Frita Especial", preco: 30.00, desc: "Com molho rosé e bacon" },
+            { id: "p2", nome: "Batata Simples", preco: 25.00, desc: "Com molho rosé" },
+            { id: "p3", nome: "Batata c/ Frango em Cubos ou Calabresa", preco: 35.00, desc: "Porção reforçada" },
+            { id: "p4", nome: "Bolinho de Carne Seca (8 un)", preco: 32.00, desc: "Porção com 8 unidades" },
+            { id: "p5", nome: "Bolinho de Bacalhau (8 un)", preco: 35.00, desc: "Porção com 8 unidades" },
+            { id: "p6", nome: "Bolinho de Presunto e Queijo (8 un)", preco: 28.00, desc: "Porção com 8 unidades" },
+            { id: "p7", nome: "Carne do Sol com Aipim", preco: 48.00, desc: "Aipim macio na manteiga" },
+            { id: "p8", nome: "Coxinha Porção", preco: 25.00, desc: "Porção especial" },
+            { id: "p9", nome: "Isca de Frango", preco: 48.00, desc: "Com molho rosé" },
+            { id: "p10", nome: "Isca de Peixe", preco: 52.00, desc: "Com molho rosé" }
+        ];
+
+        // --- CERVEJAS ---
+        const CERVEJAS = [
+            { id: "c1", nome: "Cerveja Skol 600ml", preco: 11.00, desc: "Garrafa gelada" },
+            { id: "c2", nome: "Cerveja Devassa 600ml", preco: 10.00, desc: "Garrafa gelada" },
+            { id: "c3", nome: "Cerveja Budweiser 600ml", preco: 12.00, desc: "Garrafa gelada" },
+            { id: "c4", nome: "Cerveja Eisenbahn 600ml", preco: 13.00, desc: "Garrafa gelada" },
+            { id: "c5", nome: "Cerveja Heineken 600ml", preco: 15.00, desc: "Garrafa gelada" },
+            { id: "c6", nome: "Cerveja Itaipava 600ml", preco: 10.00, desc: "Garrafa gelada" },
+            { id: "c7", nome: "Cerveja Itaipava Puro Malte 600ml", preco: 11.00, desc: "Garrafa gelada" },
+            { id: "c8", nome: "Cerveja Brahma Puro Malte 600ml", preco: 12.00, desc: "Garrafa gelada" },
+            { id: "c9", nome: "Cerveja Lata (Itaipava / Skol)", preco: 6.00, desc: "Lata 350ml" }
+        ];
+
+        // --- DRINKS ---
+        const DRINKS = [
+            { id: "d1", nome: "Coquetel de Frutas (Sem Álcool)", preco: 18.00, desc: "Delicioso e refrescante" },
+            { id: "d2", nome: "Coquetel de Frutas (Com Álcool)", preco: 20.00, desc: "Preparo especial da casa" },
+            { id: "d3", nome: "Coquetel de Morango", preco: 20.00, desc: "Morango selecionado" },
+            { id: "d4", nome: "Nevada", preco: 20.00, desc: "Drink cremoso gelado" },
+            { id: "d5", nome: "Piña Colada", preco: 20.00, desc: "Abacaxi, coco e rum" },
+            { id: "d6", nome: "Limonada Suíça", preco: 18.00, desc: "Limão e leite condensado" },
+            { id: "d7", nome: "Cajarosca", preco: 20.00, desc: "Vodka com polpa de cajá" },
+            { id: "d8", nome: "Morangorosca", preco: 20.00, desc: "Vodka com morango" },
+            { id: "d9", nome: "Caipiroska", preco: 18.00, desc: "Vodka e limão" },
+            { id: "d10", nome: "Caipirinha", preco: 15.00, desc: "Cachaça e limão" },
+            { id: "d11", nome: "Caipiríssima", preco: 18.00, desc: "Rum e limão" },
+            { id: "d12", nome: "Gin Tropical", preco: 22.00, desc: "Gin, energético e frutas" },
+            { id: "d13", nome: "Gin Especial Tônico", preco: 22.00, desc: "Gin e água tônica" },
+            { id: "d14", nome: "Taça de Vinho", preco: 15.00, desc: "Vinho tinto suave/seco" }
+        ];
+
+        // --- WHISKIES & DESTILADOS ---
+        const DESTILADOS = [
+            { id: "w1", nome: "Whisky Red Label (Dose)", preco: 18.00, desc: "Johnnie Walker" },
+            { id: "w2", nome: "Whisky Black Label (Dose)", preco: 25.00, desc: "Johnnie Walker 12 anos" },
+            { id: "w3", nome: "Whisky Teacher's (Dose)", preco: 12.00, desc: "Dose tradicional" },
+            { id: "w4", nome: "Whisky Old Eight (Dose)", preco: 12.00, desc: "Dose tradicional" },
+            { id: "w5", nome: "Whisky White Horse (Dose)", preco: 16.00, desc: "Cavalo Branco" },
+            { id: "w6", nome: "Whisky Chivas 12 Anos (Dose)", preco: 25.00, desc: "Premium" },
+            { id: "w7", nome: "Whisky Ballantines (Dose)", preco: 18.00, desc: "Dose tradicional" },
+            { id: "w8", nome: "Whisky Old Parr (Dose)", preco: 25.00, desc: "12 Anos" },
+            { id: "w9", nome: "Smirnoff Ice", preco: 12.00, desc: "Long neck 275ml" },
+            { id: "w10", nome: "Domecq (Dose)", preco: 12.00, desc: "Cognac" },
+            { id: "w11", nome: "Gin Nacional (Dose)", preco: 14.00, desc: "Dose" },
+            { id: "w12", nome: "Absolut (Dose)", preco: 20.00, desc: "Vodka Importada" },
+            { id: "w13", nome: "Campari (Dose)", preco: 14.00, desc: "Bitter italiano" },
+            { id: "w14", nome: "Bacardi (Dose)", preco: 14.00, desc: "Rum" }
+        ];
+
+        // --- BEBIDAS SEM ÁLCOOL ---
+        const BEBIDAS = [
+            { id: "b1", nome: "Água S/ Gás", preco: 3.00, desc: "500ml" },
+            { id: "b2", nome: "Água C/ Gás", preco: 3.50, desc: "500ml" },
+            { id: "b3", nome: "H2OH!", preco: 8.00, desc: "Garrafa" },
+            { id: "b4", nome: "Refrigerante Lata", preco: 6.00, desc: "350ml (Sprite, Coca, Fanta, Guaraná)" },
+            { id: "b5", nome: "Refrigerante 1 Litro", preco: 11.00, desc: "Coca-Cola / Guaraná" },
+            { id: "b6", nome: "Red Bull", preco: 15.00, desc: "Lata 250ml" },
+            { id: "b7", nome: "Água Tônica", preco: 6.00, desc: "Lata" },
+            { id: "b8", nome: "Jarra Suco de Polpa 750ml (Goiaba)", preco: 12.00, desc: "750ml" },
+            { id: "b9", nome: "Jarra Suco de Polpa 750ml (Cajá)", preco: 12.00, desc: "750ml" },
+            { id: "b10", nome: "Jarra Suco de Polpa 750ml (Manga)", preco: 12.00, desc: "750ml" },
+            { id: "b11", nome: "Jarra Suco de Polpa 750ml (Abacaxi)", preco: 12.00, desc: "750ml" },
+            { id: "b12", nome: "Jarra Suco de Polpa 750ml (Acerola)", preco: 12.00, desc: "750ml" },
+            { id: "b13", nome: "Jarra Suco de Polpa 750ml (Maracujá)", preco: 12.00, desc: "750ml" },
+            { id: "b14", nome: "Jarra Suco de Fruta 750ml (Laranja)", preco: 17.00, desc: "750ml Natural" },
+            { id: "b15", nome: "Jarra Suco de Fruta 750ml (Limão)", preco: 17.00, desc: "750ml Natural" },
+            { id: "b16", nome: "Jarra Suco de Fruta 750ml (Morango)", preco: 17.00, desc: "750ml Natural" }
+        ];
+
+        // --- ESTADO GLOBAL ---
+        let mesaNumero = null;
+        let carrinho = [];
+        let eHojePromo = false; 
+        let tamanhoSelecionado = null; 
+        let saboresSelecionados = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            verificarDiaPromocao();
+            identificarMesaPorURL();
+            renderTamanhosPizza();
+            renderListaSabores();
+            renderMassas();
+            renderPetiscos();
+            renderCervejas();
+            renderDrinks();
+            renderDestilados();
+            renderBebidas();
+            atualizarBarraCarrinho();
+        });
+
+        function verificarDiaPromocao() {
+            const hoje = new Date();
+            const diaSemana = hoje.getDay(); 
+            eHojePromo = (diaSemana === 3 || diaSemana === 4);
+            atualizarBannerPromo();
+        }
+
+        function togglePromoManual() {
+            eHojePromo = !eHojePromo;
+            atualizarBannerPromo();
+            renderTamanhosPizza();
+        }
+
+        function atualizarBannerPromo() {
+            const banner = document.getElementById('promoBannerText');
+            if (eHojePromo) {
+                banner.innerText = "🔥 PROMO QUARTA E QUINTA ATIVA!";
+            } else {
+                banner.innerText = " PREÇOS REGULARES (FORA DA PROMO)";
+            }
+        }
+
+        function identificarMesaPorURL() {
+            const params = new URLSearchParams(window.location.search);
+            const mesaParam = params.get('mesa');
+            if (mesaParam) {
+                mesaNumero = mesaParam.padStart(2, '0');
+                salvarEAtualizarMesaUI();
+            } else {
+                const mesaSalva = localStorage.getItem('pizzaria_mesa');
+                if (mesaSalva) {
+                    mesaNumero = mesaSalva;
+                    salvarEAtualizarMesaUI();
+                } else {
+                    solicitarMesa();
+                }
+            }
+        }
+
+        function solicitarMesa() {
+            document.getElementById('modalMesa').classList.remove('hidden');
+        }
+
+        function salvarMesaDigitada() {
+            const input = document.getElementById('inputNumeroMesa');
+            if (!input.value || input.value <= 0) {
+                alert('Por favor, informe um número de mesa válido.');
+                return;
+            }
+            mesaNumero = String(input.value).padStart(2, '0');
+            localStorage.setItem('pizzaria_mesa', mesaNumero);
+            salvarEAtualizarMesaUI();
+            document.getElementById('modalMesa').classList.add('hidden');
+        }
+
+        function salvarEAtualizarMesaUI() {
+            document.getElementById('mesaLabelText').innerText = `MESA ${mesaNumero}`;
+            document.getElementById('carrinhoMesaHeader').innerText = `MESA: ${mesaNumero}`;
+        }
+
+        function getTamanhos() {
+            if (eHojePromo) {
+                return [
+                    { key: 'media', nome: 'Média', maxSabores: 2, preco: 30.00, tag: 'PROMO R$ 30' },
+                    { key: 'familia', nome: 'Família', maxSabores: 3, preco: 45.00, tag: 'PROMO R$ 45' }
+                ];
+            } else {
+                return [
+                    { key: 'media', nome: 'Média', maxSabores: 2, preco: 43.00, tag: 'Até 2 sabores' },
+                    { key: 'grande', nome: 'Grande', maxSabores: 2, preco: 55.00, tag: 'Até 2 sabores' },
+                    { key: 'familia', nome: 'Família', maxSabores: 3, preco: 65.00, tag: 'Até 3 sabores' }
+                ];
+            }
+        }
+
+        function renderTamanhosPizza() {
+            const container = document.getElementById('tamanhosContainer');
+            const lista = getTamanhos();
+            container.innerHTML = '';
+
+            lista.forEach(t => {
+                const isSelected = tamanhoSelecionado && tamanhoSelecionado.key === t.key;
+                container.innerHTML += `
+                    <button onclick="selecionarTamanho('${t.key}')" class="p-3 rounded-xl border text-left transition-all ${isSelected ? 'bg-brand-gold text-brand-dark border-brand-gold font-bold shadow-lg' : 'bg-black/40 border-gray-800 text-white hover:border-gray-700'}">
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-sm">${t.nome}</span>
+                            <span class="text-[10px] uppercase font-bold bg-black/20 px-1.5 py-0.5 rounded">${t.tag}</span>
+                        </div>
+                        <p class="text-xs mt-1 font-extrabold">R$ ${t.preco.toFixed(2)}</p>
+                    </button>
+                `;
+            });
+        }
+
+        function selecionarTamanho(key) {
+            const lista = getTamanhos();
+            tamanhoSelecionado = lista.find(t => t.key === key);
+            saboresSelecionados = []; 
+
+            renderTamanhosPizza();
+            atualizarBoxSaboresUI();
+
+            const secSabores = document.getElementById('saboresSection');
+            secSabores.classList.remove('opacity-50', 'pointer-events-none');
+
+            document.getElementById('saboresStatus').innerText = `${tamanhoSelecionado.nome}: Escolha até ${tamanhoSelecionado.maxSabores} sabor(es)`;
+        }
+
+        function renderListaSabores(filtro = '') {
+            const container = document.getElementById('listaSabores');
+            container.innerHTML = '';
+
+            const filtrados = SABORES_PIZZAS.filter(s => 
+                s.nome.toLowerCase().includes(filtro.toLowerCase()) || 
+                s.ing.toLowerCase().includes(filtro.toLowerCase())
+            );
+
+            filtrados.forEach(s => {
+                const checked = saboresSelecionados.some(sub => sub.id === s.id);
+                container.innerHTML += `
+                    <div onclick="toggleSabor('${s.id}')" class="p-2.5 bg-black/40 rounded-xl border ${checked ? 'border-brand-gold bg-brand-gold/10' : 'border-gray-800/80'} flex items-start gap-2.5 cursor-pointer hover:border-gray-700">
+                        <input type="checkbox" ${checked ? 'checked' : ''} class="mt-1 accent-yellow-500 pointer-events-none">
+                        <div>
+                            <p class="text-xs font-bold text-white">${s.nome}</p>
+                            <p class="text-[10px] text-gray-400 leading-tight">${s.ing}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function buscarSabores() {
+            const val = document.getElementById('inputBuscaSabor').value;
+            renderListaSabores(val);
+        }
+
+        function toggleSabor(idSabor) {
+            if (!tamanhoSelecionado) return;
+
+            const index = saboresSelecionados.findIndex(s => s.id === idSabor);
+            if (index >= 0) {
+                saboresSelecionados.splice(index, 1);
+            } else {
+                if (saboresSelecionados.length >= tamanhoSelecionado.maxSabores) {
+                    alert(`O tamanho ${tamanhoSelecionado.nome} permite no máximo ${tamanhoSelecionado.maxSabores} sabor(es).`);
+                    return;
+                }
+                const saborObj = SABORES_PIZZAS.find(s => s.id === idSabor);
+                saboresSelecionados.push(saborObj);
+            }
+
+            atualizarBoxSaboresUI();
+            renderListaSabores(document.getElementById('inputBuscaSabor').value);
+        }
+
+        function atualizarBoxSaboresUI() {
+            const contador = document.getElementById('saboresContador');
+            const boxTags = document.getElementById('saboresSelecionadosBox');
+            const tagsDiv = document.getElementById('saboresTags');
+            const btnAdd = document.getElementById('btnAddPizza');
+
+            const max = tamanhoSelecionado ? tamanhoSelecionado.maxSabores : 0;
+            const qtd = saboresSelecionados.length;
+            contador.innerText = `${qtd}/${max}`;
+
+            if (qtd > 0) {
+                boxTags.classList.remove('hidden');
+                tagsDiv.innerHTML = saboresSelecionados.map(s => 
+                    `<span class="bg-brand-gold text-brand-dark font-extrabold text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                        ${s.nome}
+                    </span>`
+                ).join('');
+                
+                btnAdd.disabled = false;
+                btnAdd.className = "w-full mt-4 bg-brand-gold text-brand-dark font-extrabold py-3 rounded-xl text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all";
+            } else {
+                boxTags.classList.add('hidden');
+                btnAdd.disabled = true;
+                btnAdd.className = "w-full mt-4 bg-gray-700 text-gray-400 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all";
+            }
+        }
+
+        function adicionarPizzaAoCarrinho() {
+            if (!tamanhoSelecionado || saboresSelecionados.length === 0) return;
+
+            const borda = document.getElementById('bordaPizzaSelect').value;
+            const obs = document.getElementById('obsPizza').value.trim();
+            const nomesSabores = saboresSelecionados.map(s => s.nome).join(' / ');
+
+            let detalhesTexto = nomesSabores;
+            if (borda) detalhesTexto += ` | ${borda}`;
+
+            carrinho.push({
+                tipo: 'pizza',
+                titulo: `Pizza ${tamanhoSelecionado.nome} (${saboresSelecionados.length} Sabor${saboresSelecionados.length > 1 ? 'es' : ''})`,
+                detalhes: detalhesTexto,
+                preco: tamanhoSelecionado.preco,
+                obs: obs,
+                qtd: 1
+            });
+
+            tamanhoSelecionado = null;
+            saboresSelecionados = [];
+            document.getElementById('obsPizza').value = '';
+            document.getElementById('bordaPizzaSelect').value = '';
+            document.getElementById('saboresSection').classList.add('opacity-50', 'pointer-events-none');
+            document.getElementById('saboresStatus').innerText = 'Selecione o tamanho primeiro';
+            renderTamanhosPizza();
+            atualizarBoxSaboresUI();
+            atualizarBarraCarrinho();
+
+            alert('Pizza adicionada ao pedido!');
+        }
+
+        // --- RENDERIZAÇÃO DE CATEGORIAS SIMPLES E MASSAS ---
+        function renderMassas() {
+            const container = document.getElementById('listaMassas');
+            container.innerHTML = MASSAS.map(item => `
+                <div class="bg-brand-cardBg border border-gray-800 p-3.5 rounded-xl space-y-2 shadow-md">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-white">${item.nome}</h4>
+                            <p class="text-[10px] text-gray-400">${item.desc}</p>
+                            <p class="text-xs font-extrabold text-brand-gold mt-0.5">R$ ${item.preco.toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 pt-1 border-t border-gray-800/60">
+                        <select id="acomp_${item.id}" class="bg-black/60 text-white text-[11px] p-1.5 rounded-lg border border-gray-800 flex-1 focus:outline-none">
+                            <option value="Acompanhamento: Arroz">Arroz</option>
+                            <option value="Acompanhamento: Purê">Purê</option>
+                            <option value="Acompanhamento: Macarrão">Macarrão</option>
+                        </select>
+                        <button onclick="adicionarMassaComAcompanhamento('${item.id}')" class="bg-brand-gold text-brand-dark px-3 py-1.5 rounded-lg font-extrabold text-xs active:scale-95 transition-all">
+                            <i class="fa-solid fa-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function adicionarMassaComAcompanhamento(id) {
+            const item = MASSAS.find(m => m.id === id);
+            const acomp = document.getElementById(`acomp_${id}`).value;
+
+            carrinho.push({
+                idSimples: `${id}_${acomp}`,
+                tipo: 'massa',
+                titulo: item.nome,
+                detalhes: acomp,
+                preco: item.preco,
+                obs: '',
+                qtd: 1
+            });
+
+            atualizarBarraCarrinho();
+        }
+
+        function renderPetiscos() {
+            renderListaGenerica(PETISCOS, 'listaPetiscos', 'petiscos');
+        }
+
+        function renderCervejas() {
+            renderListaGenerica(CERVEJAS, 'listaCervejas', 'cervejas');
+        }
+
+        function renderDrinks() {
+            renderListaGenerica(DRINKS, 'listaDrinks', 'drinks');
+        }
+
+        function renderDestilados() {
+            renderListaGenerica(DESTILADOS, 'listaDestilados', 'destilados');
+        }
+
+        function renderBebidas() {
+            renderListaGenerica(BEBIDAS, 'listaBebidas', 'bebidas');
+        }
+
+        function renderListaGenerica(lista, elementId, categoria) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = lista.map(item => `
+                <div class="bg-brand-cardBg border border-gray-800 p-3 rounded-xl flex items-center justify-between shadow-md">
+                    <div>
+                        <h4 class="text-xs font-bold text-white">${item.nome}</h4>
+                        <p class="text-[10px] text-gray-400">${item.desc}</p>
+                        <p class="text-xs font-extrabold text-brand-gold mt-1">R$ ${item.preco.toFixed(2)}</p>
+                    </div>
+                    <button onclick="adicionarItemGenerico('${categoria}', '${item.id}')" class="bg-brand-gold text-brand-dark px-3 py-1.5 rounded-lg font-extrabold text-xs flex items-center gap-1 active:scale-95 transition-all">
+                        <i class="fa-solid fa-plus"></i> Add
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function adicionarItemGenerico(categoria, id) {
+            let lista;
+            if (categoria === 'petiscos') lista = PETISCOS;
+            else if (categoria === 'cervejas') lista = CERVEJAS;
+            else if (categoria === 'drinks') lista = DRINKS;
+            else if (categoria === 'destilados') lista = DESTILADOS;
+            else if (categoria === 'bebidas') lista = BEBIDAS;
+
+            const item = lista.find(x => x.id === id);
+            const itemExistente = carrinho.find(c => c.idSimples === id);
+
+            if (itemExistente) {
+                itemExistente.qtd += 1;
+            } else {
+                carrinho.push({
+                    idSimples: id,
+                    tipo: categoria,
+                    titulo: item.nome,
+                    detalhes: item.desc,
+                    preco: item.preco,
+                    obs: '',
+                    qtd: 1
+                });
+            }
+            atualizarBarraCarrinho();
+        }
+
+        function atualizarBarraCarrinho() {
+            const qtdTotal = carrinho.reduce((sum, item) => sum + item.qtd, 0);
+            const valorTotal = carrinho.reduce((sum, item) => sum + (item.preco * item.qtd), 0);
+
+            document.getElementById('carrinhoQtdBadge').innerText = qtdTotal;
+            document.getElementById('carrinhoTotalBarra').innerText = `R$ ${valorTotal.toFixed(2)}`;
+        }
+
+        function filtrarCategoria(cat) {
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.className = "cat-btn bg-brand-cardBg text-gray-300 px-3.5 py-2 rounded-full whitespace-nowrap transition-all border border-gray-800";
+            });
+            document.getElementById(`cat-${cat}`).className = "cat-btn bg-brand-gold text-brand-dark px-3.5 py-2 rounded-full whitespace-nowrap transition-all shadow-md font-bold";
+
+            const secoes = ['pizzas', 'massas', 'petiscos', 'cervejas', 'drinks', 'destilados', 'bebidas'];
+            secoes.forEach(s => {
+                document.getElementById(`sec-${s}`).classList.add('hidden');
+            });
+
+            document.getElementById(`sec-${cat}`).classList.remove('hidden');
+        }
+
+        function abrirModalCarrinho() {
+            if (carrinho.length === 0) {
+                alert('Seu carrinho está vazio. Selecione os itens do cardápio primeiro!');
+                return;
+            }
+            renderItensCarrinhoModal();
+            document.getElementById('modalCarrinho').classList.remove('hidden');
+        }
+
+        function fecharModalCarrinho() {
+            document.getElementById('modalCarrinho').classList.add('hidden');
+        }
+
+        function renderItensCarrinhoModal() {
+            const container = document.getElementById('carrinhoItensList');
+            container.innerHTML = '';
+
+            let subtotal = 0;
+
+            carrinho.forEach((item, idx) => {
+                const totalItem = item.preco * item.qtd;
+                subtotal += totalItem;
+
+                container.innerHTML += `
+                    <div class="bg-black/50 border border-gray-800 p-3 rounded-xl flex justify-between items-start">
+                        <div class="flex-1 pr-2">
+                            <h5 class="text-xs font-bold text-white">${item.titulo}</h5>
+                            <p class="text-[10px] text-brand-gold font-medium mt-0.5">${item.detalhes}</p>
+                            ${item.obs ? `<p class="text-[10px] text-gray-400 italic mt-0.5">Obs: "${item.obs}"</p>` : ''}
+                            <p class="text-xs font-black text-white mt-1">R$ ${item.preco.toFixed(2)} x ${item.qtd} = R$ ${totalItem.toFixed(2)}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="alterarQtdCarrinho(${idx}, -1)" class="w-6 h-6 rounded bg-gray-800 text-white font-bold text-xs">-</button>
+                            <span class="text-xs font-bold">${item.qtd}</span>
+                            <button onclick="alterarQtdCarrinho(${idx}, 1)" class="w-6 h-6 rounded bg-gray-800 text-white font-bold text-xs">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('checkoutSubtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
+            document.getElementById('checkoutTotal').innerText = `R$ ${subtotal.toFixed(2)}`;
+        }
+
+        function alterarQtdCarrinho(index, delta) {
+            carrinho[index].qtd += delta;
+            if (carrinho[index].qtd <= 0) {
+                carrinho.splice(index, 1);
+            }
+            if (carrinho.length === 0) {
+                fecharModalCarrinho();
+            } else {
+                renderItensCarrinhoModal();
+            }
+            atualizarBarraCarrinho();
+        }
+
+        function toggleTrocoInput() {
+            const val = document.getElementById('formaPagamento').value;
+            const container = document.getElementById('trocoContainer');
+            if (val === 'Dinheiro') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        function enviarPedidoWhatsApp() {
+            if (!mesaNumero) {
+                solicitarMesa();
+                return;
+            }
+
+            const nome = document.getElementById('clienteNome').value.trim() || 'Cliente na Mesa';
+            const pagamento = document.getElementById('formaPagamento').value;
+            const troco = document.getElementById('trocoValor').value.trim();
+
+            let msg = `*--- PEDIDO MESA ${mesaNumero} ---*\n`;
+            msg += `*Pizzaria Gabryelle Prime Music*\n\n`;
+            msg += `👤 *Cliente:* ${nome}\n`;
+            msg += `🪑 *Mesa:* ${mesaNumero}\n\n`;
+            msg += `*ITENS DO PEDIDO:*\n`;
+
+            let totalGeral = 0;
+            carrinho.forEach((item, i) => {
+                const sub = item.preco * item.qtd;
+                totalGeral += sub;
+                msg += `${i+1}. *${item.qtd}x ${item.titulo}*\n`;
+                msg += `   └ Detalhes: ${item.detalhes}\n`;
+                if (item.obs) msg += `   └ Obs: ${item.obs}\n`;
+                msg += `   └ Valor: R$ ${sub.toFixed(2)}\n\n`;
+            });
+
+            msg += `--------------------------------\n`;
+            msg += `💰 *TOTAL: R$ ${totalGeral.toFixed(2)}*\n`;
+            msg += `💳 *Pagamento:* ${pagamento}\n`;
+            if (pagamento === 'Dinheiro' && troco) {
+                msg += `💵 *Troco para:* ${troco}\n`;
+            }
+            msg += `--------------------------------\n`;
+            msg += `📍 *Endereço:* Avenida Cinquentenário, ao lado da Dricka Sorvetes\n`;
+
+            const url = `https://api.whatsapp.com/send?phone=${ZAP_PHONE}&text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
+        }
+
+        function abrirModalAdminQR() {
+            document.getElementById('modalAdminQR').classList.remove('hidden');
+            gerarQRCodeUnico();
+        }
+
+        function fecharModalAdminQR() {
+            document.getElementById('modalAdminQR').classList.add('hidden');
+        }
+
+        function gerarQRCodeUnico() {
+            const num = document.getElementById('qrMesaInput').value || '1';
+            const numFormatado = String(num).padStart(2, '0');
+            const display = document.getElementById('qrSingleDisplay');
+            const container = document.getElementById('qrcodeCanvas');
+
+            container.innerHTML = '';
+            display.classList.remove('hidden');
+            document.getElementById('qrMesaTextDisplay').innerText = `MESA ${numFormatado}`;
+
+            const baseUrl = window.location.href.split('?')[0];
+            const fullUrl = `${baseUrl}?mesa=${numFormatado}`;
+
+            new QRCode(container, {
+                text: fullUrl,
+                width: 140,
+                height: 140,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+
+        function gerarEImprimirVariasMesas() {
+            const win = window.open('', '_blank');
+            const baseUrl = window.location.href.split('?')[0];
+
+            let htmlContent = `
+                <html>
+                <head>
+                    <title>Imprimir QR Codes de Mesas - Pizzaria Gabryelle Prime</title>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+                    <style>
+                        body { font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; }
+                        .card { border: 2px dashed #000; padding: 15px; text-align: center; width: 160px; border-radius: 10px; }
+                        .title { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+                        .mesa { font-size: 18px; font-weight: 900; margin-top: 5px; }
+                    </style>
+                </head>
+                <body>
+            `;
+
+            for (let i = 1; i <= 10; i++) {
+                const num = String(i).padStart(2, '0');
+                htmlContent += `
+                    <div class="card">
+                        <div class="title">GABRYELLE PRIME</div>
+                        <div id="qr_${num}"></div>
+                        <div class="mesa">MESA ${num}</div>
+                        <small>Escaneie para pedir</small>
+                    </div>
+                `;
+            }
+
+            htmlContent += `
+                <script>
+                    window.onload = function() {
+                        const baseUrl = "${baseUrl}";
+                        for (let i = 1; i <= 10; i++) {
+                            const num = String(i).padStart(2, '0');
+                            new QRCode(document.getElementById('qr_' + num), {
+                                text: baseUrl + '?mesa=' + num,
+                                width: 130,
+                                height: 130
+                            });
+                        }
+                        setTimeout(() => window.print(), 800);
+                    }
+                <\/script>
+                </body>
+                </html>
+            `;
+
+            win.document.write(htmlContent);
+        }
+    </script>
+</body>
+</html>

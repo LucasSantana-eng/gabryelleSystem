@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizzaria Gabryelle Prime Music | Sabor e Qualidade em Cada Fatia</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0a0505',
+                            card: '#160d0d',
+                            border: '#2a1717',
+                            red: '#800000',
+                            crimson: '#b30000',
+                            brightRed: '#e60000',
+                            gold: '#d4af37',
+                            goldLight: '#f3e5ab',
+                            whatsapp: '#25d366'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a1717;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #800000;
+        }
+        
+        .gold-gradient-text {
+            background: linear-gradient(135deg, #f3e5ab 0%, #d4af37 50%, #aa7c11 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .gold-border-glow {
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+        }
+
+        .red-glow {
+            box-shadow: 0 0 25px rgba(179, 0, 0, 0.35);
+        }
+
+        .promo-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .9; transform: scale(1.03); }
+        }
+
+        .chat-bubble-user {
+            background: #800000;
+            color: #fff;
+            border-radius: 18px 18px 4px 18px;
+        }
+
+        .chat-bubble-bot {
+            background: #1f1414;
+            color: #e5e7eb;
+            border: 1px solid #361c1c;
+            border-radius: 18px 18px 18px 4px;
+        }
+    </style>
+</head>
+<body class="bg-brand-dark text-gray-100 font-sans min-h-screen flex flex-col justify-between selection:bg-brand-red selection:text-white pb-20 md:pb-0">
+
+    <!-- TOP ANNOUNCEMENT BAR FOR PROMOS -->
+    <div id="topBanner" class="bg-gradient-to-r from-brand-red via-brand-crimson to-brand-red text-white py-2 px-4 text-center text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 border-b border-brand-gold/30">
+        <i class="fa-solid fa-fire text-brand-gold text-base animate-bounce"></i>
+        <span id="bannerText">Carregando promoções...</span>
+        <button onclick="switchTab('menu')" class="ml-2 bg-brand-gold text-brand-dark px-2.5 py-0.5 rounded-full text-xs font-bold hover:bg-white transition-all shadow-md">
+            Aproveitar <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+    </div>
+    <!-- HEADER / NAVIGATION -->
+    <header class="sticky top-0 z-40 bg-brand-dark/90 backdrop-blur-md border-b border-brand-border">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- LOGO -->
+                <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('home')">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-brand-red to-brand-gold p-0.5 shadow-lg">
+                        <div class="w-full h-full bg-brand-dark rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-pizza-slice text-brand-gold text-xl"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="font-serif font-bold text-lg sm:text-xl tracking-wide leading-tight">
+                            GABRYELLE <span class="gold-gradient-text">PRIME</span>
+                        </h1>
+                        <p class="text-[10px] text-gray-400 tracking-widest uppercase flex items-center gap-1">
+                            <i class="fa-solid fa-music text-brand-gold text-[9px]"></i> Music & Pizza
+                        </p>
+                    </div>
+                </div>
+
+                <!-- DESKTOP NAV -->
+                <nav class="hidden md:flex items-center gap-1 bg-brand-card p-1.5 rounded-full border border-brand-border">
+                    <button id="nav-home" onclick="switchTab('home')" class="px-5 py-2 rounded-full text-sm font-medium transition-all text-white bg-brand-red shadow">
+                        <i class="fa-solid fa-house mr-1.5"></i> Início
+                    </button>
+                    <button id="nav-menu" onclick="switchTab('menu')" class="px-5 py-2 rounded-full text-sm font-medium transition-all text-gray-300 hover:text-white hover:bg-brand-border">
+                        <i class="fa-solid fa-utensils mr-1.5"></i> Cardápio
+                    </button>
+                    <button id="nav-chat" onclick="switchTab('chat')" class="px-5 py-2 rounded-full text-sm font-medium transition-all text-gray-300 hover:text-white hover:bg-brand-border">
+                        <i class="fa-solid fa-comments mr-1.5"></i> Atendimento Chatbot
+                    </button>
+                    <button id="nav-info" onclick="switchTab('info')" class="px-5 py-2 rounded-full text-sm font-medium transition-all text-gray-300 hover:text-white hover:bg-brand-border">
+                        <i class="fa-solid fa-location-dot mr-1.5"></i> Contato & Local
+                    </button>
+                </nav>
+
+                <!-- RIGHT HEADER ACTIONS -->
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleCartModal()" class="relative bg-brand-card hover:bg-brand-border text-white p-3 rounded-full border border-brand-border transition-all flex items-center justify-center">
+                        <i class="fa-solid fa-cart-shopping text-brand-gold text-lg"></i>
+                        <span id="cartBadge" class="hidden absolute -top-1 -right-1 bg-brand-brightRed text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-brand-dark">0</span>
+                    </button>
+
+                    <a href="https://wa.me/5577991663151?text=Ol%C3%A1!%20Vim%20pelo%20site%20e%20gostaria%20de%20fazer%20um%20pedido." target="_blank" class="hidden sm:flex items-center gap-2 bg-brand-whatsapp text-white font-bold px-4 py-2.5 rounded-full text-sm hover:brightness-110 transition-all shadow-lg shadow-brand-whatsapp/20">
+                        <i class="fa-brands fa-whatsapp text-lg"></i>
+                        <span>WhatsApp</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MOBILE BOTTOM NAVIGATION -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-brand-card/95 backdrop-blur-lg border-t border-brand-border px-4 py-2 flex justify-around items-center">
+        <button onclick="switchTab('home')" id="mob-home" class="flex flex-col items-center gap-1 text-brand-gold text-xs font-medium">
+            <i class="fa-solid fa-house text-lg"></i>
+            <span>Início</span>
+        </button>
+        <button onclick="switchTab('menu')" id="mob-menu" class="flex flex-col items-center gap-1 text-gray-400 text-xs font-medium">
+            <i class="fa-solid fa-utensils text-lg"></i>
+            <span>Cardápio</span>
+        </button>
+        <button onclick="switchTab('chat')" id="mob-chat" class="flex flex-col items-center gap-1 text-gray-400 text-xs font-medium relative">
+            <i class="fa-solid fa-comments text-lg"></i>
+            <span>Chatbot</span>
+            <span class="absolute top-0 right-2 w-2 h-2 bg-brand-gold rounded-full"></span>
+        </button>
+        <button onclick="switchTab('info')" id="mob-info" class="flex flex-col items-center gap-1 text-gray-400 text-xs font-medium">
+            <i class="fa-solid fa-location-dot text-lg"></i>
+            <span>Local</span>
+        </button>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- ================= TAB 1: HOME / LANDING PAGE ================= -->
+        <section id="tab-home" class="space-y-12">
+            <!-- HERO SECTION -->
+            <div class="relative rounded-3xl overflow-hidden bg-gradient-to-r from-brand-card via-brand-dark to-brand-card border border-brand-border p-6 sm:p-12 lg:p-16 red-glow">
+                <div class="absolute inset-0 opacity-15 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
+                
+                <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+                        <div class="inline-flex items-center gap-2 bg-brand-red/30 border border-brand-red/60 text-brand-gold px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <i class="fa-solid fa-award text-sm"></i> A Melhor Pizzaria de Itapetinga
+                        </div>
+                        
+                        <h1 class="font-serif text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight">
+                            Sabor e Qualidade em <span class="gold-gradient-text">Cada Fatia.</span>
+                        </h1>
+                        
+                        <p class="text-gray-300 text-base sm:text-lg max-w-2xl mx-auto lg:mx-0 font-light">
+                            Ingredientes selecionados, massa artesanal crocante por fora e macia por dentro, combinados com um ambiente musical aconchegante para você e sua família.
+                        </p>
+
+                        <!-- QUICK ACTION BUTTONS -->
+                        <div class="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-2">
+                            <button onclick="switchTab('menu')" class="bg-gradient-to-r from-brand-red to-brand-crimson hover:from-brand-crimson hover:to-brand-brightRed text-white font-bold px-6 py-3.5 rounded-xl shadow-lg hover:shadow-brand-red/50 transition-all flex items-center gap-2 text-sm sm:text-base">
+                                <i class="fa-solid fa-utensils text-brand-gold"></i> Ver Cardápio Completo
+                            </button>
+
+                            <a href="https://wa.me/5577991663151?text=Ol%C3%A1!%20Gostaria%20de%20fazer%20um%20pedido%20pelo%20WhatsApp." target="_blank" class="bg-brand-whatsapp hover:brightness-110 text-white font-bold px-6 py-3.5 rounded-xl transition-all flex items-center gap-2 text-sm sm:text-base shadow-lg shadow-brand-whatsapp/20">
+                                <i class="fa-brands fa-whatsapp text-xl"></i> Pedir no WhatsApp
+                            </a>
+
+                            <button onclick="switchTab('chat')" class="bg-brand-card border border-brand-gold/40 text-brand-gold hover:bg-brand-gold hover:text-brand-dark font-bold px-5 py-3.5 rounded-xl transition-all flex items-center gap-2 text-sm">
+                                <i class="fa-solid fa-robot"></i> Chamar Chatbot
+                            </button>
+                        </div>
+
+                        <!-- BADGES -->
+                        <div class="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-gray-400 border-t border-brand-border/60">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-clock text-brand-gold"></i>
+                                <span>Aberto a partir das 18:00</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-motorcycle text-brand-gold"></i>
+                                <span>Entrega Rápida em Itapetinga</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-credit-card text-brand-gold"></i>
+                                <span>Pix / Cartões / Dinheiro</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HERO IMAGE / FEATURED DISPLAY -->
+                    <div class="lg:col-span-5 flex justify-center">
+                        <div class="relative w-full max-w-sm sm:max-w-md">
+                            <!-- Glow Background -->
+                            <div class="absolute -inset-1 bg-gradient-to-r from-brand-gold to-brand-red rounded-full blur-2xl opacity-30 animate-pulse"></div>
+                            
+                            <div class="relative bg-brand-card p-4 rounded-3xl border border-brand-border shadow-2xl text-center space-y-4">
+                                <div class="relative h-64 sm:h-72 rounded-2xl overflow-hidden group">
+                                    <img src="https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800&auto=format&fit=crop" alt="Pizza Gabryelle Prime" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                    <div class="absolute bottom-3 left-3 right-3 text-left">
+                                        <span class="bg-brand-gold text-brand-dark text-[10px] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wider">Mais Pedida</span>
+                                        <h3 class="text-white font-serif font-bold text-lg mt-1">Pizza Gabryelle Prime</h3>
+                                        <p class="text-xs text-gray-300 line-clamp-1">Mussarela, Peito de Peru, Catupiry, Ovos e Toque de Orégano</p>
+                                    </div>
+                                </div>
+
+                                <div class="bg-brand-dark/80 p-3 rounded-xl border border-brand-border flex items-center justify-between text-left">
+                                    <div>
+                                        <p class="text-xs text-gray-400">Promoção Hoje:</p>
+                                        <p id="heroPromoTag" class="text-sm font-bold text-brand-gold">Pizza Média por apenas R$ 30,00!</p>
+                                    </div>
+                                    <button onclick="switchTab('menu')" class="bg-brand-red hover:bg-brand-crimson text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+                                        Pedir Agora
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROMO BANNER SPECIAL SECTION -->
+            <div id="promoSectionHighlight" class="bg-gradient-to-br from-brand-card via-brand-dark to-brand-card border-2 border-brand-gold/40 rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="space-y-2 text-center md:text-left">
+                        <span class="bg-brand-gold/20 text-brand-gold border border-brand-gold/40 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
+                            <i class="fa-solid fa-tags mr-1"></i> Promoção Especial Quarta e Quinta
+                        </span>
+                        <h2 class="text-2xl sm:text-3xl font-serif font-bold text-white">
+                            Sua Pizza Favorita por um Preço Imbatível!
+                        </h2>
+                        <p class="text-gray-300 text-sm max-w-xl">
+                            Todas as quartas e quintas-feiras: <span class="text-brand-gold font-bold">Pizza Média por R$ 30,00</span> (Preço Normal: R$ 43,00) e <span class="text-brand-gold font-bold">Pizza Família por R$ 45,00</span> (Preço Normal: R$ 65,00).
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3 min-w-max">
+                        <button onclick="switchTab('menu')" class="bg-brand-gold hover:bg-brand-goldLight text-brand-dark font-extrabold px-6 py-3.5 rounded-xl shadow-lg transition-all text-center">
+                            Aproveitar Desconto
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FEATURES / HIGHLIGHTS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-brand-card p-6 rounded-2xl border border-brand-border hover:border-brand-gold/50 transition-all group">
+                    <div class="w-12 h-12 rounded-xl bg-brand-red/30 border border-brand-red/60 text-brand-gold flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-fire-burner"></i>
+                    </div>
+                    <h3 class="font-serif text-lg font-bold text-white mb-2">Massa Fresca & Forno Quente</h3>
+                    <p class="text-sm text-gray-400">Preparadas diariamente com ingredientes selecionados de alta qualidade para garantir sabor e textura inigualáveis.</p>
+                </div>
+
+                <div class="bg-brand-card p-6 rounded-2xl border border-brand-border hover:border-brand-gold/50 transition-all group">
+                    <div class="w-12 h-12 rounded-xl bg-brand-red/30 border border-brand-red/60 text-brand-gold flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-crown"></i>
+                    </div>
+                    <h3 class="font-serif text-lg font-bold text-white mb-2">Linha Exclusiva Prime</h3>
+                    <p class="text-sm text-gray-400">Sabores especiais como Lombinho Prime, 6 Queijos Prime e Peito de Peru Prime com combinações perfeitas.</p>
+                </div>
+
+                <div class="bg-brand-card p-6 rounded-2xl border border-brand-border hover:border-brand-gold/50 transition-all group">
+                    <div class="w-12 h-12 rounded-xl bg-brand-red/30 border border-brand-red/60 text-brand-gold flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-truck-fast"></i>
+                    </div>
+                    <h3 class="font-serif text-lg font-bold text-white mb-2">Delivery Rápido</h3>
+                    <p class="text-sm text-gray-400">Entregamos sua pizza quentinha no conforto da sua casa com agilidade e embalagem térmica especial.</p>
+                </div>
+            </div>
+
+            <!-- POPULAR FLAVORS PREVIEW -->
+            <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-serif font-bold text-white">Sabores Destaque</h2>
+                        <p class="text-xs text-gray-400">Os queridinhos dos nossos clientes em Itapetinga</p>
+                    </div>
+                    <button onclick="switchTab('menu')" class="text-brand-gold hover:underline text-sm font-semibold flex items-center gap-1">
+                        Ver Todos <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                </div>
+
+                <div id="popularGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= TAB 2: MENU / CARDÁPIO COMPLETE ================= -->
+        <section id="tab-menu" class="hidden space-y-6">
+            <!-- MENU HEADER & DAY TOGGLE -->
+            <div class="bg-brand-card p-6 rounded-2xl border border-brand-border space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-serif font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-book-open text-brand-gold"></i> Nosso Cardápio
+                        </h2>
+                        <p class="text-xs text-gray-400">Escolha seus sabores preferidos e monte seu pedido rapidamente</p>
+                    </div>
+
+                    <!-- PROMO DAY SELECTOR / DETECTOR -->
+                    <div class="bg-brand-dark p-2 rounded-xl border border-brand-border flex items-center gap-2">
+                        <span class="text-xs text-gray-400 px-2 font-medium">Modo de Preço:</span>
+                        <button id="btnPromoToday" onclick="setPromoMode('auto')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-brand-gold text-brand-dark">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> <span id="autoPromoLabel">Auto Detectar</span>
+                        </button>
+                        <button id="btnForcePromo" onclick="setPromoMode('promo')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-gray-400 hover:text-white">
+                            Quarta/Quinta (Promo)
+                        </button>
+                        <button id="btnNormalPrice" onclick="setPromoMode('normal')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-gray-400 hover:text-white">
+                            Dias Normais
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SEARCH AND CATEGORY FILTERS -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2">
+                    <!-- Search Input -->
+                    <div class="md:col-span-5 relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="searchInput" oninput="filterMenu()" placeholder="Buscar por sabor ou ingrediente (ex: Catupiry, Bacon)..." class="w-full bg-brand-dark border border-brand-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-gold transition-all">
+                    </div>
+
+                    <!-- Category Buttons -->
+                    <div class="md:col-span-7 flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                        <button onclick="filterCategory('all')" class="cat-btn active px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all bg-brand-red text-white">
+                            Todos os Itens
+                        </button>
+                        <button onclick="filterCategory('tradicional')" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all bg-brand-dark text-gray-300 hover:border-brand-gold border border-brand-border">
+                            Pizzas Tradicionais
+                        </button>
+                        <button onclick="filterCategory('prime')" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all bg-brand-dark text-gray-300 hover:border-brand-gold border border-brand-border">
+                            Sabores Prime
+                        </button>
+                        <button onclick="filterCategory('doce')" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all bg-brand-dark text-gray-300 hover:border-brand-gold border border-brand-border">
+                            Pizzas Doces
+                        </button>
+                        <button onclick="filterCategory('petisco')" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all bg-brand-dark text-gray-300 hover:border-brand-gold border border-brand-border">
+                            Petiscos
+                        </button>
+                        <button onclick="filterCategory('bebida')" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all bg-brand-dark text-gray-300 hover:border-brand-gold border border-brand-border">
+                            Bebidas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRICE TABLE NOTICE -->
+            <div id="priceNotice" class="bg-brand-card/60 p-4 rounded-xl border border-brand-border text-xs text-gray-300 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-brand-gold text-base"></i>
+                    <span>Tamanhos de Pizza: <strong>Média</strong> (6 fatias), <strong>Grande</strong> (8 fatias), <strong>Família</strong> (10-12 fatias).</span>
+                </div>
+                <div id="priceBadgeDisplay" class="font-bold text-brand-gold">
+                    <!-- Updated dynamically -->
+                </div>
+            </div>
+
+            <!-- MENU ITEMS GRID -->
+            <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Dynamically Populated by JS -->
+            </div>
+        </section>
+
+
+        <!-- ================= TAB 3: CHATBOT INTERATIVO ================= -->
+        <section id="tab-chat" class="hidden space-y-4 max-w-4xl mx-auto">
+            <div class="bg-brand-card rounded-2xl border border-brand-border overflow-hidden flex flex-col h-[650px] shadow-2xl">
+                <!-- CHAT HEADER -->
+                <div class="bg-gradient-to-r from-brand-red via-brand-dark to-brand-card p-4 border-b border-brand-border flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <div class="w-10 h-10 rounded-full bg-brand-gold/20 border border-brand-gold flex items-center justify-center text-brand-gold">
+                                <i class="fa-solid fa-robot text-lg"></i>
+                            </div>
+                            <span class="w-3 h-3 bg-brand-whatsapp rounded-full absolute bottom-0 right-0 border-2 border-brand-dark"></span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-white text-sm">Gabryelle Bot Prime</h3>
+                            <p class="text-[11px] text-gray-400">Atendimento virtual 24/7</p>
+                        </div>
+                    </div>
+                    <button onclick="clearChatHistory()" class="text-xs text-gray-400 hover:text-brand-gold transition-all px-2 py-1 rounded bg-brand-dark/50">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Limpar Chat
+                    </button>
+                </div>
+
+                <!-- CHAT MESSAGES BODY -->
+                <div id="chatMessages" class="flex-grow p-4 overflow-y-auto space-y-4">
+                    <!-- Messages dynamically inserted here -->
+                </div>
+
+                <!-- QUICK REPLIES -->
+                <div class="p-3 bg-brand-dark/90 border-t border-brand-border/60 overflow-x-auto no-scrollbar flex items-center gap-2">
+                    <span class="text-[10px] text-gray-400 font-bold uppercase whitespace-nowrap">Sugestões:</span>
+                    <button onclick="sendQuickReply('Ver Promoções de Hoje')" class="bg-brand-card hover:bg-brand-border text-xs text-brand-gold border border-brand-gold/30 px-3 py-1.5 rounded-full whitespace-nowrap transition-all">
+                        🏷️ Promoções de Hoje
+                    </button>
+                    <button onclick="sendQuickReply('Horário de Funcionamento')" class="bg-brand-card hover:bg-brand-border text-xs text-gray-300 border border-brand-border px-3 py-1.5 rounded-full whitespace-nowrap transition-all">
+                        🕒 Horários
+                    </button>
+                    <button onclick="sendQuickReply('Qual o endereço e como chegar?')" class="bg-brand-card hover:bg-brand-border text-xs text-gray-300 border border-brand-border px-3 py-1.5 rounded-full whitespace-nowrap transition-all">
+                        📍 Endereço
+                    </button>
+                    <button onclick="sendQuickReply('Recomende os sabores mais pedidos')" class="bg-brand-card hover:bg-brand-border text-xs text-gray-300 border border-brand-border px-3 py-1.5 rounded-full whitespace-nowrap transition-all">
+                        ⭐ Mais Pedidos
+                    </button>
+                    <button onclick="sendQuickReply('Formas de Pagamento')" class="bg-brand-card hover:bg-brand-border text-xs text-gray-300 border border-brand-border px-3 py-1.5 rounded-full whitespace-nowrap transition-all">
+                        💳 Pagamento
+                    </button>
+                </div>
+
+                <!-- CHAT INPUT -->
+                <div class="p-3 bg-brand-card border-t border-brand-border flex items-center gap-2">
+                    <input type="text" id="chatInput" onkeypress="handleChatKeyPress(event)" placeholder="Digite sua mensagem ou dúvida sobre o cardápio..." class="flex-grow bg-brand-dark border border-brand-border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-gold transition-all">
+                    <button onclick="sendChatMessage()" class="bg-brand-red hover:bg-brand-crimson text-white px-5 py-3 rounded-xl transition-all font-bold flex items-center justify-center">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= TAB 4: CONTATO & LOCALIZAÇÃO ================= -->
+        <section id="tab-info" class="hidden space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- CONTATO E HORÁRIOS -->
+                <div class="lg:col-span-5 space-y-6">
+                    <div class="bg-brand-card p-6 rounded-2xl border border-brand-border space-y-4">
+                        <h2 class="text-2xl font-serif font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-store text-brand-gold"></i> Gabryelle Prime Music
+                        </h2>
+                        <p class="text-xs text-gray-400">A melhor experiência em sabor e música em Itapetinga - BA</p>
+
+                        <div class="space-y-4 pt-2">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-brand-red/20 text-brand-gold flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-location-dot text-lg"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase">Endereço</h4>
+                                    <p class="text-sm font-semibold text-white">Avenida Cinquentenário, ao lado da Dricka Sorvete</p>
+                                    <p class="text-xs text-gray-400">Itapetinga - BA</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-brand-red/20 text-brand-gold flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-phone text-lg"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase">Telefone & WhatsApp</h4>
+                                    <p class="text-sm font-semibold text-white">(77) 99166-3151</p>
+                                    <p class="text-xs text-gray-400">Atendimento e Pedidos de Delivery</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-brand-red/20 text-brand-gold flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-clock text-lg"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase">Horário de Atendimento</h4>
+                                    <p class="text-sm font-semibold text-white">Terça a Domingo: 18:00h às 23:30h</p>
+                                    <p class="text-xs text-brand-gold font-medium">Promoções especiais toda Quarta e Quinta!</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex flex-col gap-2">
+                            <a href="https://wa.me/5577991663151?text=Ol%C3%A1!%20Gostaria%20de%20informa%C3%A7%C3%B5es." target="_blank" class="w-full bg-brand-whatsapp text-white text-center py-3 rounded-xl font-bold text-sm hover:brightness-110 transition-all flex items-center justify-center gap-2">
+                                <i class="fa-brands fa-whatsapp text-lg"></i> Conversar no WhatsApp
+                            </a>
+                            <a href="https://maps.google.com/?q=Avenida+Cinquentenário,+Itapetinga+-+BA" target="_blank" class="w-full bg-brand-dark border border-brand-border text-gray-200 text-center py-3 rounded-xl font-bold text-sm hover:bg-brand-border transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-diamond-turn-right text-brand-gold"></i> Abrir no GPS / Google Maps
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MAP / VISUAL LOCATION -->
+                <div class="lg:col-span-7">
+                    <div class="bg-brand-card rounded-2xl border border-brand-border p-6 h-full flex flex-col justify-between space-y-4">
+                        <div>
+                            <h3 class="text-xl font-serif font-bold text-white mb-2">Como Chegar até Nós</h3>
+                            <p class="text-xs text-gray-400">Estamos localizados no coração da cidade, no ponto mais tradicional da Avenida Cinquentenário.</p>
+                        </div>
+
+                        <!-- Simulated Interactive Location Card -->
+                        <div class="relative h-80 rounded-xl overflow-hidden border border-brand-border bg-brand-dark flex items-center justify-center group">
+                            <img src="https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700" alt="Mapa Itapetinga">
+                            <div class="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-brand-dark/60"></div>
+                            
+                            <div class="relative z-10 text-center p-6 space-y-3 bg-brand-card/90 backdrop-blur-md rounded-2xl border border-brand-gold/30 max-w-sm">
+                                <div class="w-12 h-12 rounded-full bg-brand-red text-brand-gold mx-auto flex items-center justify-center text-xl shadow-lg">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                </div>
+                                <h4 class="font-bold text-white">Av. Cinquentenário</h4>
+                                <p class="text-xs text-gray-300">Ao lado da Dricka Sorvete - Itapetinga, BA</p>
+                                <a href="https://maps.google.com/?q=Avenida+Cinquentenário,+Itapetinga+-+BA" target="_blank" class="inline-block bg-brand-gold text-brand-dark font-extrabold px-4 py-2 rounded-lg text-xs hover:bg-white transition-all shadow">
+                                    Navegar com Waze / Google Maps
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-brand-card border-t border-brand-border py-8 mt-12 text-center text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto px-4 space-y-3">
+            <p class="font-serif text-gray-300 text-sm">Pizzaria Gabryelle Prime Music • Sabor e Qualidade em Cada Fatia</p>
+            <p>Avenida Cinquentenário (Ao lado da Dricka Sorvete) • Itapetinga - BA | Tel: (77) 99166-3151</p>
+            <p class="text-[11px] text-gray-600">© 2026 Pizzaria Gabryelle Prime. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- CART MODAL -->
+    <div id="cartModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex justify-end transition-opacity duration-300">
+        <div class="bg-brand-card w-full max-w-md h-full flex flex-col justify-between border-l border-brand-border shadow-2xl">
+            <!-- CART HEADER -->
+            <div class="p-4 bg-brand-dark border-b border-brand-border flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-basket-shopping text-brand-gold text-lg"></i>
+                    <h3 class="font-bold text-white text-base">Seu Pedido</h3>
+                </div>
+                <button onclick="toggleCartModal()" class="text-gray-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- CART ITEMS LIST -->
+            <div id="cartItemsList" class="flex-grow p-4 overflow-y-auto space-y-3">
+                <!-- Cart items rendered here -->
+            </div>
+
+            <!-- CART FOOTER & CHECKOUT -->
+            <div class="p-4 bg-brand-dark border-t border-brand-border space-y-4">
+                <!-- Delivery options -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <input type="text" id="cartCustomerName" maxlength="120" autocomplete="name" placeholder="Seu nome" class="w-full bg-brand-card border border-brand-border rounded-lg p-2.5 text-white focus:outline-none focus:border-brand-gold">
+                    <input type="tel" id="cartCustomerPhone" maxlength="30" autocomplete="tel" placeholder="Telefone / WhatsApp" class="w-full bg-brand-card border border-brand-border rounded-lg p-2.5 text-white focus:outline-none focus:border-brand-gold">
+                </div>
+                <div class="space-y-2 text-xs">
+                    <label class="block text-gray-400 font-medium">Tipo de Pedido:</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="optDelivery" onclick="setDeliveryType('delivery')" class="py-2 px-3 rounded-lg font-bold border transition-all bg-brand-red text-white border-brand-red">
+                            <i class="fa-solid fa-motorcycle mr-1"></i> Entrega (Delivery)
+                        </button>
+                        <button id="optPickup" onclick="setDeliveryType('pickup')" class="py-2 px-3 rounded-lg font-bold border transition-all bg-brand-dark text-gray-300 border-brand-border">
+                            <i class="fa-solid fa-bag-shopping mr-1"></i> Retirada no Balcão
+                        </button>
+                    </div>
+                </div>
+
+                <div id="addressFieldGroup" class="space-y-2 text-xs">
+                    <input type="text" id="cartAddress" placeholder="Bairro e Rua com número (ex: Clodoaldo Costa, Rua 2, #100)" class="w-full bg-brand-card border border-brand-border rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-brand-gold">
+                    <input type="text" id="cartComplement" placeholder="Ponto de referência / Complemento" class="w-full bg-brand-card border border-brand-border rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-brand-gold">
+                </div>
+
+                <div class="space-y-2 text-xs">
+                    <label class="block text-gray-400 font-medium">Forma de Pagamento:</label>
+                    <select id="cartPayment" class="w-full bg-brand-card border border-brand-border rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-brand-gold">
+                        <option value="Pix">Pix (Chave informada no Atendimento)</option>
+                        <option value="Cartão de Crédito/Débito">Cartão de Crédito / Débito (Levar Maquininha)</option>
+                        <option value="Dinheiro">Dinheiro (Informar se precisa de troco)</option>
+                    </select>
+                </div>
+
+                <!-- TOTAL CALCULATION -->
+                <div class="border-t border-brand-border/60 pt-3 space-y-1">
+                    <div class="flex justify-between text-xs text-gray-400">
+                        <span>Subtotal itens:</span>
+                        <span id="cartSubtotal">R$ 0,00</span>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-400">
+                        <span>Taxa de Entrega (estimada):</span>
+                        <span id="cartDeliveryFee">R$ 5,00</span>
+                    </div>
+                    <div class="flex justify-between text-base font-bold text-white pt-1">
+                        <span>Total Final:</span>
+                        <span id="cartTotal" class="text-brand-gold">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <div id="onlineOrderStatus" class="hidden rounded-xl border border-brand-border bg-brand-dark p-3 text-xs text-gray-200"></div>
+                <button id="submitOnlineOrderButton" onclick="finishOnlineOrder()" class="w-full bg-brand-whatsapp hover:brightness-110 text-white font-extrabold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-whatsapp/20">
+                    <i class="fa-solid fa-paper-plane text-lg"></i>
+                    <span>Enviar pedido para a pizzaria</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pizzaFlavorModal" class="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-brand-card w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-brand-border shadow-2xl">
+            <div class="p-4 border-b border-brand-border">
+                <h3 id="pizzaFlavorTitle" class="font-bold text-white text-lg">Escolha os sabores</h3>
+                <p id="pizzaFlavorHint" class="text-xs text-gray-400 mt-1"></p>
+            </div>
+            <div id="pizzaFlavorOptions" class="p-4 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+            <div class="p-4 border-t border-brand-border flex justify-between gap-3">
+                <button onclick="closePizzaFlavorPicker()" class="px-4 py-2 rounded-lg border border-brand-border text-xs text-gray-300 hover:text-white">Cancelar</button>
+                <button id="pizzaFlavorConfirm" onclick="confirmPizzaFlavors()" class="px-4 py-2 rounded-lg bg-brand-red text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed">Adicionar pizza</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLOATING CHAT WIDGET BUTTON -->
+    <div class="fixed bottom-20 md:bottom-6 right-6 z-40 flex flex-col items-end gap-2">
+        <button onclick="switchTab('chat')" class="bg-gradient-to-tr from-brand-red to-brand-gold text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all border-2 border-white/20 flex items-center justify-center group">
+            <i class="fa-solid fa-robot text-2xl"></i>
+            <span class="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-in-out text-xs font-bold pl-0 group-hover:pl-2">
+                Dúvidas ou Pedidos?
+            </span>
+        </button>
+    </div>
+
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // DATA STRUCTURE: Complete Menu based on uploaded pizza cards & prices
+        const MENU_DATA = [
+            // TRADICIONAIS & ESPECIAS
+            { id: 1, name: "Nordestina", category: "tradicional", desc: "Carne do sol, mussarela, cebola, catupiry e orégano.", popular: true, img: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?q=80&w=500&auto=format&fit=crop" },
+            { id: 2, name: "Presunto", category: "tradicional", desc: "Mussarela, presunto e orégano.", img: "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?q=80&w=500&auto=format&fit=crop" },
+            { id: 3, name: "Palmito", category: "tradicional", desc: "Palmito, mussarela, tomate e orégano.", img: "https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?q=80&w=500&auto=format&fit=crop" },
+            { id: 4, name: "Paulistinha", category: "tradicional", desc: "Milho, mussarela, bacon e orégano.", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=500&auto=format&fit=crop" },
+            { id: 5, name: "Portuguesa c/ Catupiry", category: "tradicional", desc: "Presunto, mussarela, cebola, ovos, catupiry, azeitonas e orégano.", popular: true, img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=500&auto=format&fit=crop" },
+            { id: 6, name: "Quatro Queijos", category: "tradicional", desc: "Mussarela, catupiry, provolone, parmesão e orégano.", popular: true, img: "https://images.unsplash.com/photo-1573821663912-569905455b1c?q=80&w=500&auto=format&fit=crop" },
+            { id: 7, name: "Romana", category: "tradicional", desc: "Atum, mussarela, tomate e orégano.", img: "https://images.unsplash.com/photo-1588315029754-2dd089d39a15?q=80&w=500&auto=format&fit=crop" },
+            { id: 8, name: "Salaminho", category: "tradicional", desc: "Salaminho, mussarela e orégano.", img: "https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=500&auto=format&fit=crop" },
+            { id: 9, name: "Siciliana", category: "tradicional", desc: "Mussarela, champignon, bacon e orégano.", img: "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?q=80&w=500&auto=format&fit=crop" },
+            { id: 10, name: "Suprema", category: "tradicional", desc: "Presunto, mussarela, frango, milho, bacon, catupiry e orégano.", img: "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?q=80&w=500&auto=format&fit=crop" },
+            { id: 11, name: "Texa", category: "tradicional", desc: "Mussarela, calabresa moída, cebola, pimenta, bacon e orégano.", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=500&auto=format&fit=crop" },
+            { id: 12, name: "Tomate Seco", category: "tradicional", desc: "Mussarela, tomate seco, manjericão e orégano.", img: "https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?q=80&w=500&auto=format&fit=crop" },
+            { id: 13, name: "À Moda da Casa", category: "tradicional", desc: "Presunto, mussarela, frango, calabresa, ovos, milho, azeitona e orégano.", img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=500&auto=format&fit=crop" },
+            { id: 14, name: "Atum", category: "tradicional", desc: "Atum, cebola, mussarela e orégano.", img: "https://images.unsplash.com/photo-1588315029754-2dd089d39a15?q=80&w=500&auto=format&fit=crop" },
+            { id: 15, name: "Calabresa Acebolada", category: "tradicional", desc: "Calabresa fatiada, cebola, mussarela e orégano.", img: "https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=500&auto=format&fit=crop" },
+            { id: 16, name: "Frango com Catupiry", category: "tradicional", desc: "Frango desfiado, mussarela, catupiry e orégano.", popular: true, img: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?q=80&w=500&auto=format&fit=crop" },
+
+            // LINE PRIME (SABORES EXCLUSIVOS)
+            { id: 17, name: "Gabryelle Prime", category: "prime", desc: "Mussarela, Peito de Peru, Catupiry especial, Ovos e Orégano.", popular: true, img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=500&auto=format&fit=crop" },
+            { id: 18, name: "Lombinho Prime", category: "prime", desc: "Lombo canadense selecionado, mussarela, catupiry crocante e bacon granulado.", popular: true, img: "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?q=80&w=500&auto=format&fit=crop" },
+            { id: 19, name: "6 Queijos Prime", category: "prime", desc: "Mussarela, Catupiry, Provolone, Parmesão, Gorgonzola e Requeijão Cremoso.", img: "https://images.unsplash.com/photo-1573821663912-569905455b1c?q=80&w=500&auto=format&fit=crop" },
+            { id: 20, name: "Estrogonofe de Frango", category: "prime", desc: "Tiras de frango ao molho especial, batata palha, mussarela e orégano.", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=500&auto=format&fit=crop" },
+
+            // PIZZAS DOCES
+            { id: 21, name: "Banana com Canela", category: "doce", desc: "Mussarela, banana fatiada, açúcar, canela e leite condensado.", img: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?q=80&w=500&auto=format&fit=crop" },
+            { id: 22, name: "Brigadeiro", category: "doce", desc: "Chocolate ao leite cremoso, granulado gourmet e leite condensado.", img: "https://images.unsplash.com/photo-1579751626657-72bc17010498?q=80&w=500&auto=format&fit=crop" },
+            { id: 23, name: "Nutella c/ Morango", category: "doce", desc: "Base de Nutella pura, morangos frescos fatiados.", popular: true, img: "https://images.unsplash.com/photo-1588315029754-2dd089d39a15?q=80&w=500&auto=format&fit=crop" },
+            { id: 24, name: "Romeo e Julieta", category: "doce", desc: "Mussarela e goiabada cremosa especial.", img: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?q=80&w=500&auto=format&fit=crop" },
+
+            // PETISCOS (PREÇOS FIXOS)
+            { id: 101, name: "Batata Frita Especial", category: "petisco", desc: "Acompanha queijo derretido e bacon crocante.", fixedPrice: 30.00, img: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?q=80&w=500&auto=format&fit=crop" },
+            { id: 102, name: "Batata Simples", category: "petisco", desc: "Porção generosa e crocante.", fixedPrice: 25.00, img: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?q=80&w=500&auto=format&fit=crop" },
+            { id: 103, name: "Carne do Sol c/ Aipim", category: "petisco", desc: "Carne do sol acebolada servida com aipim frito dourado.", fixedPrice: 48.00, img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=500&auto=format&fit=crop" },
+            { id: 104, name: "Carne do Sol c/ Batata Frita", category: "petisco", desc: "Acompanha batata frita bem crocante.", fixedPrice: 55.00, img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=500&auto=format&fit=crop" },
+            { id: 105, name: "Isca de Frango", category: "petisco", desc: "Tiras de frango empanadas e molho especial da casa.", fixedPrice: 48.00, img: "https://images.unsplash.com/photo-1562967914-608f82629710?q=80&w=500&auto=format&fit=crop" },
+
+            // BEBIDAS (PREÇOS FIXOS)
+            { id: 201, name: "Água Mineral 500ml", category: "bebida", desc: "Sem gás", fixedPrice: 3.00, img: "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?q=80&w=500&auto=format&fit=crop" },
+            { id: 202, name: "Água c/ Gás 500ml", category: "bebida", desc: "Com gás", fixedPrice: 3.50, img: "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?q=80&w=500&auto=format&fit=crop" },
+            { id: 203, name: "Refrigerante Lata", category: "bebida", desc: "Coca-Cola, Guaraná ou Fanta 350ml", fixedPrice: 6.00, img: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?q=80&w=500&auto=format&fit=crop" },
+            { id: 204, name: "Refrigerante 1 Litro", category: "bebida", desc: "Garrafa 1L variados", fixedPrice: 11.00, img: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?q=80&w=500&auto=format&fit=crop" },
+            { id: 205, name: "Suco Polpa 750ml", category: "bebida", desc: "Diversos sabores naturais da polpa", fixedPrice: 12.00, img: "https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=500&auto=format&fit=crop" },
+            { id: 206, name: "Jarra Suco da Fruta 750ml", category: "bebida", desc: "Suco fresco feito da fruta", fixedPrice: 17.00, img: "https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=500&auto=format&fit=crop" },
+            { id: 207, name: "Jarra Suco de Laranja", category: "bebida", desc: "Laranja natural espremida na hora (750ml)", fixedPrice: 17.00, img: "https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=500&auto=format&fit=crop" }
+        ];
+
+        // STATE APP VARIABLES
+        let currentTab = 'home';
+        let cart = [];
+        let currentCategory = 'all';
+        let promoMode = 'auto'; // 'auto', 'promo', 'normal'
+        let deliveryType = 'delivery'; // 'delivery', 'pickup'
+        let isPromoDayActive = false;
+        let pizzaFlavorSelection = null;
+
+        // ON INITIALIZATION
+        window.addEventListener('DOMContentLoaded', () => {
+            checkDayAndPromo();
+            renderPopularFlavors();
+            renderMenu();
+            initChatbotGreeting();
+        });
+
+        function finishOnlineOrder() {
+            if (cart.length === 0) {
+                alert("Seu carrinho está vazio! Adicione itens do cardápio.");
+                return;
+            }
+
+            const customerName = document.getElementById('cartCustomerName').value.trim();
+            const customerPhone = document.getElementById('cartCustomerPhone').value.trim();
+            const address = document.getElementById('cartAddress').value;
+            const complement = document.getElementById('cartComplement').value;
+            const payment = document.getElementById('cartPayment').value;
+
+            if (!customerName || !customerPhone) {
+                alert("Por favor, informe seu nome e telefone para enviar o pedido.");
+                return;
+            }
+            if (deliveryType === 'delivery' && !address.trim()) {
+                alert("Por favor, preencha o endereço de entrega.");
+                return;
+            }
+
+            const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+            const fee = deliveryType === 'delivery' ? 5.00 : 0.00;
+            const total = subtotal + fee;
+            const formatCurrency = value => `R$ ${value.toFixed(2).replace('.', ',')}`;
+            const lines = [
+                '*NOVO PEDIDO - GABRYELLE PRIME MUSIC*',
+                '',
+                `*Cliente:* ${customerName}`,
+                `*Telefone:* ${customerPhone}`,
+                `*Tipo:* ${deliveryType === 'delivery' ? 'Entrega' : 'Retirada no balcão'}`
+            ];
+            if (deliveryType === 'delivery') {
+                lines.push(`*Endereço:* ${address.trim()}`);
+                if (complement.trim()) lines.push(`*Complemento:* ${complement.trim()}`);
+            }
+            lines.push('', '*ITENS DO PEDIDO*');
+            cart.forEach(item => {
+                lines.push(`*${item.qty}x ${item.name}*${item.size && item.size !== 'Padrão' ? ` (${item.size})` : ''}`);
+                if (item.flavors?.length) lines.push(`Sabores: ${item.flavors.join(' + ')}`);
+                lines.push(`Unitário: ${formatCurrency(item.price)}`);
+            });
+            lines.push(
+                '',
+                `*Subtotal:* ${formatCurrency(subtotal)}`,
+                `*Taxa de entrega:* ${formatCurrency(fee)}`,
+                `*Total:* ${formatCurrency(total)}`,
+                `*Pagamento:* ${payment}`
+            );
+            const whatsappUrl = `https://wa.me/5577991663151?text=${encodeURIComponent(lines.join('\n'))}`;
+            const openedWindow = window.open(whatsappUrl, '_blank');
+            if (openedWindow) openedWindow.opener = null;
+
+            const status = document.getElementById('onlineOrderStatus');
+            status.replaceChildren();
+            status.className = 'rounded-xl border border-brand-whatsapp/50 bg-brand-whatsapp/10 p-3 text-xs text-gray-200';
+            status.append('Revise o pedido no WhatsApp e toque em enviar para concluir.');
+            if (!openedWindow) {
+                status.append(' ');
+                const link = document.createElement('a');
+                link.href = whatsappUrl;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.className = 'font-bold text-brand-whatsapp underline';
+                link.textContent = 'Abrir WhatsApp';
+                status.append(link);
+            }
+            status.classList.remove('hidden');
+        }
+
+        // CHECK DAY OF WEEK (Wednesday = 3, Thursday = 4)
+        function checkDayAndPromo() {
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0: Sun, 1: Mon, ..., 3: Wed, 4: Thu
+            
+            if (promoMode === 'auto') {
+                isPromoDayActive = (dayOfWeek === 3 || dayOfWeek === 4);
+            } else if (promoMode === 'promo') {
+                isPromoDayActive = true;
+            } else {
+                isPromoDayActive = false;
+            }
+
+            // Update Top Banner
+            const bannerText = document.getElementById('bannerText');
+            const heroPromoTag = document.getElementById('heroPromoTag');
+            const autoPromoLabel = document.getElementById('autoPromoLabel');
+            const priceBadgeDisplay = document.getElementById('priceBadgeDisplay');
+
+            const daysMap = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+            const currentDayName = daysMap[dayOfWeek];
+
+            if (isPromoDayActive) {
+                bannerText.innerHTML = `🔥 <strong>PROMOÇÃO ATIVA (${currentDayName}):</strong> Pizza Média por <strong>R$ 30,00</strong> e Família por <strong>R$ 45,00</strong>!`;
+                heroPromoTag.innerText = "HOJE É DIA DE PROMOÇÃO! Média R$ 30 | Família R$ 45";
+                priceBadgeDisplay.innerText = "⚡ Preços de Promoção (Quarta/Quinta) Aplicados!";
+            } else {
+                bannerText.innerHTML = `🍕 HOJE (${currentDayName}): Preços padrão ativos! Aproveite nossas pizzas a partir de R$ 43,00.`;
+                heroPromoTag.innerText = "Pizza Média R$ 43,00 | Grande R$ 55,00 | Família R$ 65,00";
+                priceBadgeDisplay.innerText = "Preços Padrão: Média R$ 43,00 | Grande R$ 55,00 | Família R$ 65,00";
+            }
+
+            if (autoPromoLabel) {
+                autoPromoLabel.innerText = `Auto (${currentDayName})`;
+            }
+
+            renderMenu();
+        }
+
+        function setPromoMode(mode) {
+            promoMode = mode;
+            
+            // Toggle active classes on buttons
+            document.getElementById('btnPromoToday').className = mode === 'auto' ? "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-brand-gold text-brand-dark" : "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-gray-400 hover:text-white";
+            document.getElementById('btnForcePromo').className = mode === 'promo' ? "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-brand-gold text-brand-dark" : "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-gray-400 hover:text-white";
+            document.getElementById('btnNormalPrice').className = mode === 'normal' ? "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-brand-gold text-brand-dark" : "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-gray-400 hover:text-white";
+
+            checkDayAndPromo();
+        }
+
+        // TAB SWITCHING LOGIC
+        function switchTab(tabId) {
+            currentTab = tabId;
+            ['home', 'menu', 'chat', 'info'].forEach(t => {
+                const sec = document.getElementById(`tab-${t}`);
+                const navBtn = document.getElementById(`nav-${t}`);
+                const mobBtn = document.getElementById(`mob-${t}`);
+
+                if (t === tabId) {
+                    sec.classList.remove('hidden');
+                    if (navBtn) {
+                        navBtn.className = "px-5 py-2 rounded-full text-sm font-medium transition-all text-white bg-brand-red shadow";
+                    }
+                    if (mobBtn) {
+                        mobBtn.className = "flex flex-col items-center gap-1 text-brand-gold text-xs font-medium";
+                    }
+                } else {
+                    sec.classList.add('hidden');
+                    if (navBtn) {
+                        navBtn.className = "px-5 py-2 rounded-full text-sm font-medium transition-all text-gray-300 hover:text-white hover:bg-brand-border";
+                    }
+                    if (mobBtn) {
+                        mobBtn.className = "flex flex-col items-center gap-1 text-gray-400 text-xs font-medium";
+                    }
+                }
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // RENDER POPULAR FLAVORS ON HOMEPAGE
+        function renderPopularFlavors() {
+            const popularGrid = document.getElementById('popularGrid');
+            const popularItems = MENU_DATA.filter(item => item.popular).slice(0, 4);
+
+            popularGrid.innerHTML = popularItems.map(item => `
+                <div class="bg-brand-card rounded-2xl border border-brand-border overflow-hidden hover:border-brand-gold/50 transition-all flex flex-col justify-between group">
+                    <div class="relative h-44 overflow-hidden">
+                        <img src="${item.img}" alt="${item.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <span class="absolute top-2 right-2 bg-brand-gold text-brand-dark text-[10px] font-extrabold px-2 py-0.5 rounded shadow">Destaque</span>
+                    </div>
+                    <div class="p-4 flex-grow flex flex-col justify-between space-y-3">
+                        <div>
+                            <h3 class="font-serif font-bold text-white text-base">${item.name}</h3>
+                            <p class="text-xs text-gray-400 mt-1 line-clamp-2">${item.desc}</p>
+                        </div>
+                        <button onclick="switchTab('menu'); setTimeout(() => filterMenu('${item.name}'), 100)" class="w-full bg-brand-dark border border-brand-border hover:bg-brand-red hover:border-brand-red text-white py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-cart-plus text-brand-gold"></i> Montar Pedido
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // RENDER COMPLETE MENU
+        function renderMenu() {
+            const menuGrid = document.getElementById('menuGrid');
+            const searchVal = document.getElementById('searchInput')?.value.toLowerCase() || '';
+
+            const filtered = MENU_DATA.filter(item => {
+                const matchesCategory = (currentCategory === 'all') || (item.category === currentCategory);
+                const matchesSearch = item.name.toLowerCase().includes(searchVal) || item.desc.toLowerCase().includes(searchVal);
+                return matchesCategory && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                menuGrid.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-gray-400 space-y-3">
+                        <i class="fa-solid fa-pizza-slice text-4xl text-brand-border"></i>
+                        <p class="text-sm">Nenhum item encontrado com o termo "${searchVal}".</p>
+                    </div>
+                `;
+                return;
+            }
+
+            menuGrid.innerHTML = filtered.map(item => {
+                const isPizza = item.category !== 'petisco' && item.category !== 'bebida';
+
+                // Prices
+                const priceMedia = isPromoDayActive ? 30.00 : 43.00;
+                const priceGrande = 55.00;
+                const priceFamilia = isPromoDayActive ? 45.00 : 65.00;
+
+                return `
+                    <div class="bg-brand-card rounded-2xl border border-brand-border overflow-hidden hover:border-brand-gold/40 transition-all flex flex-col justify-between">
+                        <div class="relative h-48 overflow-hidden">
+                            <img src="${item.img}" alt="${item.name}" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-brand-card via-transparent to-transparent"></div>
+                            <span class="absolute top-2 left-2 bg-brand-dark/80 backdrop-blur-md text-brand-gold border border-brand-gold/30 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+                                ${item.category}
+                            </span>
+                            ${isPromoDayActive && isPizza ? `
+                                <span class="absolute top-2 right-2 bg-brand-red text-white font-extrabold text-[10px] px-2 py-0.5 rounded-md animate-pulse">
+                                    PROMOÇÃO
+                                </span>
+                            ` : ''}
+                        </div>
+
+                        <div class="p-4 flex-grow flex flex-col justify-between space-y-4">
+                            <div>
+                                <h3 class="font-serif font-bold text-white text-lg">${item.name}</h3>
+                                <p class="text-xs text-gray-400 mt-1 leading-relaxed">${item.desc}</p>
+                            </div>
+
+                            ${isPizza ? `
+                                <!-- PIZZA SIZE SELECTION -->
+                                <div class="space-y-2 border-t border-brand-border/60 pt-3">
+                                    <p class="text-[11px] font-bold text-gray-400 uppercase">Escolha o Tamanho:</p>
+                                    <div class="grid grid-cols-3 gap-1.5 text-center">
+                                        <button onclick="openPizzaFlavorPicker(${item.id}, 'Média', ${priceMedia})" class="bg-brand-dark hover:bg-brand-red border border-brand-border hover:border-brand-red p-2 rounded-xl transition-all group">
+                                            <div class="text-[10px] text-gray-400 group-hover:text-white">Média</div>
+                                            <div class="text-xs font-extrabold ${isPromoDayActive ? 'text-brand-gold' : 'text-white'}">R$ ${priceMedia.toFixed(2)}</div>
+                                        </button>
+                                        <button onclick="openPizzaFlavorPicker(${item.id}, 'Grande', ${priceGrande})" class="bg-brand-dark hover:bg-brand-red border border-brand-border hover:border-brand-red p-2 rounded-xl transition-all group">
+                                            <div class="text-[10px] text-gray-400 group-hover:text-white">Grande</div>
+                                            <div class="text-xs font-extrabold text-white">R$ ${priceGrande.toFixed(2)}</div>
+                                        </button>
+                                        <button onclick="openPizzaFlavorPicker(${item.id}, 'Família', ${priceFamilia})" class="bg-brand-dark hover:bg-brand-red border border-brand-border hover:border-brand-red p-2 rounded-xl transition-all group">
+                                            <div class="text-[10px] text-gray-400 group-hover:text-white">Família</div>
+                                            <div class="text-xs font-extrabold ${isPromoDayActive ? 'text-brand-gold' : 'text-white'}">R$ ${priceFamilia.toFixed(2)}</div>
+                                        </button>
+                                    </div>
+                                </div>
+                            ` : `
+                                <!-- FIXED PRICE ITEM -->
+                                <div class="flex items-center justify-between border-t border-brand-border/60 pt-3">
+                                    <div>
+                                        <span class="text-[10px] text-gray-400 uppercase font-bold block">Valor:</span>
+                                        <span class="text-base font-extrabold text-brand-gold">R$ ${item.fixedPrice.toFixed(2)}</span>
+                                    </div>
+                                    <button onclick="addToCart(${item.id}, 'Padrão', ${item.fixedPrice})" class="bg-brand-red hover:bg-brand-crimson text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+                                        <i class="fa-solid fa-plus"></i> Adicionar
+                                    </button>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // FILTER CATEGORY
+        function filterCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.className = "cat-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all bg-brand-dark text-gray-300 hover:border-brand-gold border border-brand-border";
+            });
+            event.target.className = "cat-btn active px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all bg-brand-red text-white";
+            renderMenu();
+        }
+
+        function filterMenu(text) {
+            if (text) {
+                document.getElementById('searchInput').value = text;
+            }
+            renderMenu();
+        }
+
+        // CART MANAGEMENT
+        function addToCart(itemId, size, price) {
+            const item = MENU_DATA.find(i => i.id === itemId);
+            if (!item) return;
+
+            const cartIndex = cart.findIndex(c => c.id === itemId && c.size === size);
+
+            if (cartIndex > -1) {
+                cart[cartIndex].qty += 1;
+            } else {
+                cart.push({
+                    id: itemId,
+                    name: item.name,
+                    size: size,
+                    price: price,
+                    qty: 1
+                });
+            }
+
+            updateCartUI();
+            showNotification(`"${item.name} (${size})" adicionado ao pedido!`);
+        }
+
+        function openPizzaFlavorPicker(itemId, size, price) {
+            const maxFlavors = { 'Média': 2, 'Grande': 3, 'Família': 4 }[size];
+            if (!maxFlavors) return;
+            const modal = document.getElementById('pizzaFlavorModal');
+            pizzaFlavorSelection = {
+                size,
+                price,
+                maxFlavors,
+                selectedIds: new Set([itemId])
+            };
+            document.getElementById('pizzaFlavorTitle').textContent = `Pizza ${size}`;
+            renderPizzaFlavorOptions();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function renderPizzaFlavorOptions() {
+            if (!pizzaFlavorSelection) return;
+            const flavors = MENU_DATA.filter(item => item.category !== 'petisco' && item.category !== 'bebida');
+            const selectedCount = pizzaFlavorSelection.selectedIds.size;
+            document.getElementById('pizzaFlavorHint').textContent =
+                `Escolha de 1 a ${pizzaFlavorSelection.maxFlavors} sabores. Selecionados: ${selectedCount}/${pizzaFlavorSelection.maxFlavors}.`;
+            document.getElementById('pizzaFlavorOptions').innerHTML = flavors.map(item => {
+                const selected = pizzaFlavorSelection.selectedIds.has(item.id);
+                const disabled = !selected && selectedCount >= pizzaFlavorSelection.maxFlavors;
+                return `<button type="button" onclick="togglePizzaFlavor(${item.id})" ${disabled ? 'disabled' : ''}
+                    class="text-left rounded-xl border p-3 transition ${selected
+                        ? 'border-brand-gold bg-brand-gold/10 text-white'
+                        : 'border-brand-border bg-brand-dark text-gray-300 hover:border-brand-gold'} ${disabled ? 'opacity-40 cursor-not-allowed' : ''}">
+                    <span class="flex items-center justify-between gap-2 text-sm font-bold">
+                        <span>${item.name}</span>
+                        <i class="fa-solid ${selected ? 'fa-circle-check text-brand-gold' : 'fa-circle text-gray-600'}"></i>
+                    </span>
+                    <span class="block text-[11px] text-gray-400 mt-1">${item.desc}</span>
+                </button>`;
+            }).join('');
+            document.getElementById('pizzaFlavorConfirm').disabled = selectedCount < 1;
+        }
+
+        function togglePizzaFlavor(itemId) {
+            if (!pizzaFlavorSelection) return;
+            const selectedIds = pizzaFlavorSelection.selectedIds;
+            if (selectedIds.has(itemId)) {
+                selectedIds.delete(itemId);
+            } else if (selectedIds.size < pizzaFlavorSelection.maxFlavors) {
+                selectedIds.add(itemId);
+            }
+            renderPizzaFlavorOptions();
+        }
+
+        function closePizzaFlavorPicker() {
+            document.getElementById('pizzaFlavorModal').classList.add('hidden');
+            document.getElementById('pizzaFlavorModal').classList.remove('flex');
+            pizzaFlavorSelection = null;
+        }
+
+        function confirmPizzaFlavors() {
+            if (!pizzaFlavorSelection || pizzaFlavorSelection.selectedIds.size < 1) return;
+            const chosen = MENU_DATA.filter(item => pizzaFlavorSelection.selectedIds.has(item.id));
+            const flavors = chosen.map(item => item.name);
+            const size = pizzaFlavorSelection.size;
+            const price = pizzaFlavorSelection.price;
+            const flavorKey = flavors.slice().sort().join('|');
+            const existing = cart.find(item =>
+                item.isPizza && item.size === size && item.flavors.slice().sort().join('|') === flavorKey
+            );
+            if (existing) {
+                existing.qty += 1;
+            } else {
+                cart.push({
+                    id: `pizza-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                    name: `Pizza ${size}`,
+                    size,
+                    flavors,
+                    isPizza: true,
+                    price,
+                    qty: 1
+                });
+            }
+            closePizzaFlavorPicker();
+            updateCartUI();
+            showNotification(`Pizza ${size} com ${flavors.join(' + ')} adicionada ao pedido!`);
+        }
+
+        function updateCartQuantity(index, change) {
+            cart[index].qty += change;
+            if (cart[index].qty <= 0) {
+                cart.splice(index, 1);
+            }
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const cartBadge = document.getElementById('cartBadge');
+            const cartItemsList = document.getElementById('cartItemsList');
+            const cartSubtotal = document.getElementById('cartSubtotal');
+            const cartDeliveryFee = document.getElementById('cartDeliveryFee');
+            const cartTotal = document.getElementById('cartTotal');
+
+            const totalItems = cart.reduce((acc, i) => acc + i.qty, 0);
+            const subtotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+            const fee = deliveryType === 'delivery' ? 5.00 : 0.00;
+            const total = subtotal + fee;
+
+            // Badge count
+            if (totalItems > 0) {
+                cartBadge.innerText = totalItems;
+                cartBadge.classList.remove('hidden');
+            } else {
+                cartBadge.classList.add('hidden');
+            }
+
+            // Render List
+            if (cart.length === 0) {
+                cartItemsList.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-center text-gray-400 space-y-3 py-12">
+                        <i class="fa-solid fa-basket-shopping text-4xl text-brand-border"></i>
+                        <p class="text-sm">Seu carrinho está vazio.</p>
+                        <button onclick="toggleCartModal(); switchTab('menu');" class="bg-brand-red text-white px-4 py-2 rounded-xl text-xs font-bold">
+                            Ver Cardápio
+                        </button>
+                    </div>
+                `;
+            } else {
+                cartItemsList.innerHTML = cart.map((item, index) => `
+                    <div class="bg-brand-dark p-3 rounded-xl border border-brand-border flex items-center justify-between gap-3">
+                        <div class="flex-grow">
+                            <h4 class="text-sm font-bold text-white">${item.name}</h4>
+                            ${item.flavors?.length ? `<p class="text-[11px] text-gray-300 mt-1">${item.flavors.map(flavor => `<span class="block">• ${flavor}</span>`).join('')}</p>` : ''}
+                            <p class="text-xs text-brand-gold font-medium mt-1">Tam: ${item.size} • R$ ${item.price.toFixed(2)}</p>
+                        </div>
+                        <div class="flex items-center gap-2 bg-brand-card p-1 rounded-lg border border-brand-border">
+                            <button onclick="updateCartQuantity(${index}, -1)" class="w-6 h-6 rounded bg-brand-dark text-gray-300 font-bold hover:text-white flex items-center justify-center text-xs">
+                                -
+                            </button>
+                            <span class="text-xs font-bold text-white px-1">${item.qty}</span>
+                            <button onclick="updateCartQuantity(${index}, 1)" class="w-6 h-6 rounded bg-brand-dark text-gray-300 font-bold hover:text-white flex items-center justify-center text-xs">
+                                +
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            cartSubtotal.innerText = `R$ ${subtotal.toFixed(2)}`;
+            cartDeliveryFee.innerText = deliveryType === 'delivery' ? `R$ ${fee.toFixed(2)}` : 'Grátis';
+            cartTotal.innerText = `R$ ${total.toFixed(2)}`;
+        }
+
+        function setDeliveryType(type) {
+            deliveryType = type;
+            const btnDel = document.getElementById('optDelivery');
+            const btnPic = document.getElementById('optPickup');
+            const addrField = document.getElementById('addressFieldGroup');
+
+            if (type === 'delivery') {
+                btnDel.className = "py-2 px-3 rounded-lg font-bold border transition-all bg-brand-red text-white border-brand-red";
+                btnPic.className = "py-2 px-3 rounded-lg font-bold border transition-all bg-brand-dark text-gray-300 border-brand-border";
+                addrField.classList.remove('hidden');
+            } else {
+                btnPic.className = "py-2 px-3 rounded-lg font-bold border transition-all bg-brand-red text-white border-brand-red";
+                btnDel.className = "py-2 px-3 rounded-lg font-bold border transition-all bg-brand-dark text-gray-300 border-brand-border";
+                addrField.classList.add('hidden');
+            }
+            updateCartUI();
+        }
+
+        function toggleCartModal() {
+            const modal = document.getElementById('cartModal');
+            modal.classList.toggle('hidden');
+            updateCartUI();
+        }
+
+        // CHATBOT SIMULATION LOGIC
+        const chatMessages = document.getElementById('chatMessages');
+
+        function initChatbotGreeting() {
+            chatMessages.innerHTML = `
+                <div class="chat-bubble-bot p-3.5 max-w-[85%] text-xs leading-relaxed space-y-2">
+                    <p>👋 Olá! Seja bem-vindo à <strong>Pizzaria Gabryelle Prime Music</strong>!</p>
+                    <p>Eu sou o assistente virtual Gabryelle Bot. Como posso te ajudar hoje?</p>
+                </div>
+            `;
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            appendUserMessage(text);
+            input.value = '';
+
+            setTimeout(() => {
+                processBotResponse(text);
+            }, 600);
+        }
+
+        function sendQuickReply(text) {
+            appendUserMessage(text);
+            setTimeout(() => {
+                processBotResponse(text);
+            }, 600);
+        }
+
+        function handleChatKeyPress(e) {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        function appendUserMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'flex justify-end';
+            div.innerHTML = `
+                <div class="chat-bubble-user p-3.5 max-w-[85%] text-xs leading-relaxed">
+                    ${text}
+                </div>
+            `;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function processBotResponse(query) {
+            const q = query.toLowerCase();
+            let botReply = "";
+
+            if (q.includes("promo") || q.includes("quarta") || q.includes("quinta") || q.includes("desconto") || q.includes("hoje")) {
+                botReply = `
+                    🔥 <strong>Promoções Especiais de Quarta e Quinta:</strong><br><br>
+                    • <strong>Pizza Média</strong> por apenas <strong>R$ 30,00</strong> (Preço normal: R$ 43,00)<br>
+                    • <strong>Pizza Família</strong> por apenas <strong>R$ 45,00</strong> (Preço normal: R$ 65,00)<br><br>
+                    Nos outros dias os valores são: Média R$ 43, Grande R$ 55 e Família R$ 65.<br><br>
+                    <button onclick="switchTab('menu')" class="mt-2 bg-brand-gold text-brand-dark px-3 py-1 rounded text-[11px] font-bold">Ver Cardápio e Pedir</button>
+                `;
+            } else if (q.includes("horario") || q.includes("hora") || q.includes("aberto") || q.includes("fecha")) {
+                botReply = `
+                    🕒 <strong>Horário de Funcionamento:</strong><br><br>
+                    Atendemos de <strong>Terça a Domingo</strong>, das <strong>18:00h às 23:30h</strong>.<br>
+                    Fechamos apenas nas segundas-feiras para descanso da equipe.
+                `;
+            } else if (q.includes("onde") || q.includes("endereço") || q.includes("chegar") || q.includes("local") || q.includes("rua")) {
+                botReply = `
+                    📍 <strong>Nossa Localização:</strong><br><br>
+                    Estamos localizados na <strong>Avenida Cinquentenário, ao lado da Dricka Sorvete</strong> em Itapetinga - BA.<br><br>
+                    <a href="https://maps.google.com/?q=Avenida+Cinquentenário,+Itapetinga+-+BA" target="_blank" class="text-brand-gold underline font-bold">Clique aqui para abrir no Google Maps</a>.
+                `;
+            } else if (q.includes("mais pedido") || q.includes("recomend") || q.includes("sabor") || q.includes("sugestão")) {
+                botReply = `
+                    ⭐ <strong>Sabores Destaque e Mais Pedidos:</strong><br><br>
+                    1. <strong>Gabryelle Prime:</strong> Mussarela, Peito de Peru, Catupiry especial e Ovos.<br>
+                    2. <strong>Lombinho Prime:</strong> Lombo canadense, catupiry crocante e bacon.<br>
+                    3. <strong>Nordestina:</strong> Carne do sol com catupiry e cebola.<br>
+                    4. <strong>Frango com Catupiry:</strong> Clássica, super recheada.<br>
+                    5. <strong>Nutella c/ Morango:</strong> Para quem ama uma pizza doce perfeita!
+                `;
+            } else if (q.includes("pagamento") || q.includes("pix") || q.includes("cartão") || q.includes("dinheiro")) {
+                botReply = `
+                    💳 <strong>Formas de Pagamento Aceitas:</strong><br><br>
+                    • <strong>Pix</strong> (Envio do comprovante)<br>
+                    • <strong>Cartões de Crédito e Débito</strong> (Levamos a maquininha na entrega)<br>
+                    • <strong>Dinheiro</strong> (Com troco se necessário)
+                `;
+            } else if (q.includes("pedir") || q.includes("fazer pedido") || q.includes("comprar")) {
+                botReply = `
+                    🍕 Você pode montar seu pedido diretamente na nossa aba de <strong>Cardápio</strong> e enviar direto para o nosso WhatsApp, ou falar agora mesmo com nosso atendente humano clicando abaixo:<br><br>
+                    <a href="https://wa.me/5577991663151?text=Ol%C3%A1!%20Quero%20fazer%20um%20pedido." target="_blank" class="inline-block bg-brand-whatsapp text-white px-3 py-1.5 rounded text-[11px] font-bold">Falar com Atendente no WhatsApp</a>
+                `;
+            } else {
+                botReply = `
+                    Desculpe, não entendi perfeitamente. Mas posso te ajudar com:<br>
+                    • Ver as promoções ativas<br>
+                    • Saber nosso endereço em Itapetinga<br>
+                    • Ver os horários de atendimento<br>
+                    • Ver os sabores mais pedidos<br><br>
+                    Se preferir, clique no botão de WhatsApp para falar direto com nossa equipe!
+                `;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'flex justify-start';
+            div.innerHTML = `
+                <div class="chat-bubble-bot p-3.5 max-w-[85%] text-xs leading-relaxed space-y-2">
+                    ${botReply}
+                </div>
+            `;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function clearChatHistory() {
+            initChatbotGreeting();
+        }
+
+        function showNotification(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-20 right-4 z-50 bg-brand-gold text-brand-dark px-4 py-2.5 rounded-xl font-bold text-xs shadow-2xl transition-all duration-300 flex items-center gap-2';
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-base"></i> ${msg}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+    </script>
+</body>
+</html>

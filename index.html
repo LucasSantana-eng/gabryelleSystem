@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gabryelle Prime - Sistema de Gestão & PDV</title>
+    
+    <!-- Meta tags PWA para Android & iOS (Modo App / Tela Cheia) -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gabryelle PDV">
+    <meta name="theme-color" content="#121214">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        dark: {
+                            bg: '#121214',
+                            card: '#1e1e24',
+                            border: '#2d2d35',
+                            hover: '#282830'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Impressão térmica 80mm (Elgin i9: ~72mm úteis) */
+        @page { size: 80mm auto; margin: 0; }
+        #print-area { display: none; }
+        .tk-c { text-align: center; } .tk-b { font-weight: 700; } .tk-sm { font-size: 10px; }
+        .tk-brand { font-size: 20px; font-weight: 900; letter-spacing: 1px; }
+        .tk-num { font-size: 34px; font-weight: 900; line-height: 1.1; }
+        .tk-inv { background: #000; color: #fff; font-weight: 900; font-size: 18px; padding: 3px 0; margin: 4px 0; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .tk-hr { border-top: 1px dashed #000; margin: 5px 0; } .tk-hr2 { border-top: 2px solid #000; margin: 5px 0; }
+        .tk-row { display: flex; justify-content: space-between; gap: 6px; }
+        .tk-item { font-size: 15px; font-weight: 900; margin-top: 3px; }
+        .tk-det { padding-left: 10px; font-size: 12px; font-weight: 600; }
+        .tk-obs { margin: 2px 0 0 10px; border: 1.5px solid #000; padding: 1px 4px; font-weight: 900; font-size: 12px; }
+        .tk-tot { font-size: 18px; font-weight: 900; }
+        @media print {
+            html, body { background: #fff !important; }
+            body > *:not(#print-area) { display: none !important; }
+            #print-area { display: block; width: 72mm; margin: 0 auto; padding: 2mm 0; font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; font-size: 12px; line-height: 1.3; }
+        }
+        
+        /* Scrollbar customizada */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121214;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d2d35;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-gray-100 font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-gold-500 selection:text-black">
+
+    <!-- Topbar principal (Restrita por permissão) -->
+    <header class="no-print bg-dark-card border-b border-dark-border sticky top-0 z-30 px-4 py-3 flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-3">
+            <button id="btn-toggle-sidebar" class="md:hidden text-gray-300 hover:text-white">
+                <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-full bg-gold-500/20 flex items-center justify-center border border-gold-500/50">
+                    <i data-lucide="pizza" class="w-5 h-5 text-gold-500"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm leading-none tracking-wide text-white">GABRYELLE PRIME</h1>
+                    <span class="text-[10px] text-gold-500 tracking-wider">MUSIC & GASTRONOMIA</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controles Superiores & Login de Usuário -->
+        <div class="flex items-center space-x-3">
+            <!-- Botão Tela Cheia (PWA) -->
+            <button onclick="toggleFullscreen()" class="hidden sm:flex items-center space-x-1 bg-dark-bg border border-dark-border text-xs px-2.5 py-1.5 rounded text-gray-300 hover:text-gold-500 transition">
+                <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
+                <span>Tela Cheia</span>
+            </button>
+
+            <!-- Card de Usuário Logado -->
+            <div class="flex items-center bg-dark-bg border border-dark-border rounded px-2.5 py-1">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></div>
+                <div class="text-left mr-2">
+                    <div id="user-display-name" class="text-xs font-bold leading-none text-gray-200">Carregando...</div>
+                    <div id="user-display-role" class="text-[9px] text-gray-400 uppercase tracking-wider">...</div>
+                </div>
+                <button onclick="openLoginModal()" class="text-gray-400 hover:text-gold-500 p-1" title="Trocar Usuário">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden relative">
+
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="no-print absolute md:relative z-20 w-64 bg-dark-card border-r border-dark-border h-[calc(100vh-57px)] transition-transform duration-300 -translate-x-full md:translate-x-0 flex flex-col justify-between">
+            <div class="p-3 space-y-1 overflow-y-auto">
+                
+                <!-- Acesso Geral (Garçom e Gerente) -->
+                <div class="text-[10px] font-semibold text-gray-500 px-3 uppercase tracking-wider mb-1">Operação</div>
+                
+                <button onclick="switchTab('novo-pedido')" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-dark-hover hover:text-gold-500 transition">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span>Novo Pedido</span>
+                </button>
+
+                <button onclick="switchTab('mesas')" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-dark-hover hover:text-gold-500 transition">
+                    <i data-lucide="utensils" class="w-4 h-4"></i>
+                    <span>Mesas / Comandas</span>
+                </button>
+
+                <button onclick="switchTab('pedidos')" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-dark-hover hover:text-gold-500 transition">
+                    <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                    <span>Gestão de Pedidos</span>
+                </button>
+
+                <button onclick="switchTab('clientes')" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-dark-hover hover:text-gold-500 transition">
+                    <i data-lucide="contact" class="w-4 h-4"></i>
+                    <span>Clientes</span>
+                </button>
+
+                <button onclick="switchTab('kds')" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-dark-hover hover:text-gold-500 transition">
+                    <i data-lucide="chef-hat" class="w-4 h-4"></i>
+                    <span>KDS (Cozinha)</span>
+                </button>
+
+                <!-- Restrito: Apenas Gerente e Operadores de Caixa -->
+                <div class="manager-only mt-4">
+                    <div class="text-[10px] font-semibold text-gray-500 px-3 uppercase tracking-wider mb-1">Financeiro & Caixa</div>
+                    
+                    <button onclick="switchTab('caixa')" class="nav-btn active-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-dark-hover hover:text-gold-500 transition bg-dark-hover text-gold-500">
+                        <i data-lucide="wallet" class="w-4 h-4"></i>
+                        <span>Frente de Caixa</span>
+                    </button>
+
+                    <button onclick="switchTab('cardapio')" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-dark-hover hover:text-gold-500 transition">
+                        <i data-lucide="book-open" class="w-4 h-4"></i>
+                        <span>Cardápio / Preços</span>
+                    </button>
+
+                    <button onclick="switchTab('equipe')" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-dark-hover hover:text-gold-500 transition">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        <span>Garçons / Equipe</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Rodapé da Sidebar -->
+            <div class="p-3 border-t border-dark-border text-xs text-gray-500 flex justify-between items-center">
+                <span>Versão 2.5.0</span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-dark-bg">
+
+            <!-- MÓDULO 1: FRENTE DE CAIXA (RESTRITO) -->
+            <section id="tab-caixa" class="tab-content space-y-6">
+                <!-- Cabeçalho do Caixa -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-dark-card p-4 rounded-xl border border-dark-border">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-xl font-bold text-white">Caixa do Dia</h2>
+                            <span id="caixa-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ABERTO</span>
+                        </div>
+                        <p id="caixa-session" class="text-xs text-gray-400 mt-1"></p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button id="btn-caixa-sangria" onclick="caixaMov('Sangria')" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs px-3 py-2 rounded-lg font-semibold flex items-center space-x-1 transition">
+                            <i data-lucide="arrow-down-right" class="w-4 h-4"></i>
+                            <span>SANGRIA</span>
+                        </button>
+                        <button id="btn-caixa-suprimento" onclick="caixaMov('Suprimento')" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-3 py-2 rounded-lg font-semibold flex items-center space-x-1 transition">
+                            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                            <span>SUPRIMENTO</span>
+                        </button>
+                        <button id="btn-caixa-main-action" onclick="caixaMainAction()" class="bg-gold-500 hover:bg-gold-600 text-black text-xs px-4 py-2 rounded-lg font-bold flex items-center space-x-1 transition">
+                            <i id="caixa-main-action-icon" data-lucide="lock" class="w-4 h-4"></i>
+                            <span id="caixa-main-action-label">FECHAR CAIXA</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Painel Grid: Lançamentos + Resumo -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Coluna da Esquerda: Extrato de Transações -->
+                    <div class="lg:col-span-2 space-y-4">
+                        <div class="bg-dark-card rounded-xl border border-dark-border overflow-hidden">
+                            <div class="p-4 border-b border-dark-border flex justify-between items-center">
+                                <h3 class="font-bold text-sm text-gray-200">Movimentações da Sessão</h3>
+                                <span id="caixa-count" class="text-xs text-gray-400"></span>
+                            </div>
+                            
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-dark-bg text-gray-400 uppercase font-medium border-b border-dark-border">
+                                        <tr>
+                                            <th class="p-3">Data/Hora</th>
+                                            <th class="p-3">Descrição</th>
+                                            <th class="p-3">Pagamento</th>
+                                            <th class="p-3">Tipo</th>
+                                            <th class="p-3 text-right">Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="caixa-ledger-body" class="divide-y divide-dark-border text-gray-300">
+                                        <!-- Preenchido dinamicamente via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="caixa-side" class="space-y-4"></div>
+                </div>
+
+                <div class="bg-dark-card rounded-xl border border-dark-border overflow-hidden">
+                    <div class="p-4 border-b border-dark-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h3 class="font-bold text-sm text-gray-200">Histórico de caixas por data</h3>
+                            <p class="text-xs text-gray-400 mt-1">Selecione uma data para consultar os caixas encerrados.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="caixa-history-date" onchange="selectedCashHistoryId=null;renderCaixaHistory()" aria-label="Selecionar data do histórico de caixas" class="bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></select>
+                            <button id="clear-cash-history" onclick="limparHistoricoCaixa()" class="hidden bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs px-3 py-2 rounded-lg font-semibold">Limpar histórico</button>
+                        </div>
+                    </div>
+                    <div id="caixa-history-list" class="divide-y divide-dark-border"></div>
+                    <div id="caixa-history-detail" class="hidden border-t border-dark-border p-4"></div>
+                </div>
+            </section>
+
+            <!-- MÓDULO 2: GESTÃO DE EQUIPE & GARÇONS -->
+            <section id="tab-equipe" class="tab-content hidden space-y-6">
+                <div class="flex justify-between items-center bg-dark-card p-4 rounded-xl border border-dark-border">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Garçons & Usuários do Sistema</h2>
+                        <p class="text-xs text-gray-400">Cadastre, edite ou remova funcionários e PINs de acesso.</p>
+                    </div>
+                    <button onclick="openUserModalForAdd()" class="bg-gold-500 hover:bg-gold-600 text-black text-xs font-bold px-4 py-2 rounded-lg flex items-center space-x-1 transition">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        <span>NOVO FUNCIONÁRIO</span>
+                    </button>
+                </div>
+
+                <!-- Tabela de Usuários -->
+                <div class="bg-dark-card rounded-xl border border-dark-border overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-dark-bg text-gray-400 text-xs uppercase font-medium border-b border-dark-border">
+                            <tr>
+                                <th class="p-4">Nome do Funcionário</th>
+                                <th class="p-4">Cargo / Perfil</th>
+                                <th class="p-4">Código PIN</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body" class="divide-y divide-dark-border text-gray-300">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- MÓDULO 3: NOVO PEDIDO (CARDÁPIO + CARRINHO) -->
+            <section id="tab-novo-pedido" class="tab-content hidden space-y-4">
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                    <div class="xl:col-span-2 space-y-3">
+                        <input id="menu-search" oninput="renderMenu()" placeholder="Buscar no cardápio (ex: calabresa, skol, lasanha)..." class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500 !p-3">
+                        <div id="menu-cats" class="flex gap-2 overflow-x-auto pb-1"></div>
+                        <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                    </div>
+                    <div class="bg-dark-card rounded-xl border border-dark-border p-4 space-y-3 h-fit xl:sticky xl:top-0">
+                        <h3 class="font-bold text-sm text-gold-500 tracking-wide">PEDIDO ATUAL</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="o-type" onchange="onTypeChange()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"><option value="MESA">Mesa</option><option value="BALCAO">Balcão</option><option value="DELIVERY">Delivery</option></select>
+                            <select id="o-mesa" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></select>
+                        </div>
+                        <div id="o-del-box" class="hidden space-y-2">
+                            <div class="relative"><input id="o-busca" oninput="buscaCli(this.value)" placeholder="🔍 Buscar cliente cadastrado (telefone ou nome)" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"><div id="o-busca-res" class="hidden absolute z-20 left-0 right-0 mt-1 bg-dark-card border border-dark-border rounded-lg shadow-xl max-h-56 overflow-y-auto"></div></div>
+                            <div id="o-conf-box" class="hidden bg-amber-500/10 border border-amber-500/40 rounded-lg p-2 text-xs text-amber-300 space-y-1"><div>Cliente já cadastrado. Confirme o endereço com ele:</div><div id="o-conf-txt" class="font-semibold text-white"></div><label class="flex items-center gap-2"><input id="o-conf" type="checkbox"> Endereço confirmado com o cliente</label></div>
+                            <input id="o-cli" placeholder="Nome do cliente" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                            <input id="o-tel" placeholder="Telefone" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                            <input id="o-end" placeholder="Endereço completo + referência" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                            <div class="grid grid-cols-2 gap-2"><input id="o-bairro" placeholder="Bairro" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"><input id="o-taxa" type="number" step="0.01" min="0" placeholder="Taxa entrega" oninput="renderCart()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></div>
+                        </div>
+                        <div id="cart-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+                        <div id="cart-svc-row" class="hidden border-t border-dark-border pt-2"><div class="flex justify-between items-center text-xs text-gray-300"><label class="flex items-center gap-2"><input id="o-svc" type="checkbox" checked onchange="renderCart()"> Taxa de serviço (<span id="svc-pct"></span>%)</label><span id="cart-svc"></span></div></div>
+                        <div class="flex justify-between font-bold text-sm text-gold-400 border-t border-dark-border pt-2"><span>TOTAL</span><span id="cart-total">R$ 0,00</span></div>
+                        <select id="o-pay" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></select>
+                        <label class="flex items-center gap-2 text-xs text-gray-400"><input id="o-print" type="checkbox" checked> Imprimir comanda da cozinha</label>
+                        <button onclick="createOrder()" class="w-full bg-gold-500 hover:bg-gold-600 text-black font-bold py-2.5 rounded-lg text-xs">FINALIZAR PEDIDO</button>
+                    </div>
+                </div>
+                <details class="bg-dark-card p-4 rounded-xl border border-dark-border">
+                    <summary class="cursor-pointer text-sm font-bold text-white">Importar pedido do WhatsApp/cartão virtual (delivery)</summary>
+                    <div class="mt-3 space-y-3">
+                        <textarea id="whatsapp-input" rows="8" class="w-full bg-dark-bg border border-dark-border rounded-lg p-3 text-xs text-gray-200 focus:outline-none focus:border-gold-500 font-mono"></textarea>
+                        <p class="text-[11px] text-gray-400">Cole a mensagem completa com produtos, quantidades, preços e dados de entrega para gerar e imprimir o pedido automaticamente.</p>
+                        <div class="flex justify-end space-x-3">
+                            <button onclick="document.getElementById('whatsapp-input').value = ''" class="px-4 py-2 rounded-lg border border-dark-border text-xs text-gray-400 hover:text-white">Limpar</button>
+                            <button onclick="processWhatsAppOrder()" class="px-5 py-2 rounded-lg bg-gold-500 hover:bg-gold-600 text-black text-xs font-bold">PROCESSAR & IMPRIMIR COMANDAS</button>
+                        </div>
+                    </div>
+                </details>
+            </section>
+
+            <!-- MÓDULO 3B: CARDÁPIO / PREÇOS (RESTRITO) -->
+            <section id="tab-cardapio" class="tab-content hidden space-y-4">
+                <div class="bg-dark-card p-4 rounded-xl border border-dark-border">
+                    <h2 class="text-xl font-bold text-white">Cardápio & Preços</h2>
+                    <p class="text-xs text-gray-400">Configure os preços normais e promocionais. Promoções são aplicadas automaticamente nos dias selecionados.</p>
+                    <p id="cardapio-alert" class="text-xs text-amber-400 mt-2"></p>
+                </div>
+                <div id="cardapio-admin" class="space-y-4"></div>
+            </section>
+
+            <!-- MÓDULO: CLIENTES DO DELIVERY -->
+            <section id="tab-clientes" class="tab-content hidden space-y-4">
+                <div class="bg-dark-card p-4 rounded-xl border border-dark-border flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div><h2 class="text-xl font-bold text-white">Clientes do Delivery</h2><p class="text-xs text-gray-400">Salvos automaticamente a cada pedido de delivery.</p></div>
+                    <input id="cli-q" oninput="renderClientes()" placeholder="Buscar por nome ou telefone..." class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500 md:w-64">
+                </div>
+                <div class="bg-dark-card rounded-xl border border-dark-border overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-dark-bg text-gray-400 uppercase font-medium border-b border-dark-border"><tr><th class="p-3">Cliente</th><th class="p-3">Telefone</th><th class="p-3">Endereço</th><th class="p-3">Pedidos</th><th class="p-3 text-right">Ações</th></tr></thead>
+                        <tbody id="cli-body" class="divide-y divide-dark-border text-gray-300"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- MÓDULO 4: MESAS E COMANDAS -->
+            <section id="tab-mesas" class="tab-content hidden space-y-6">
+                <div class="flex justify-between items-center bg-dark-card p-4 rounded-xl border border-dark-border">
+                    <h2 class="text-xl font-bold text-white">Mapa de Mesas</h2>
+                    <div class="flex items-center space-x-4 text-xs">
+                        <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-gray-300">Livre</span></span>
+                        <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-gold-500"></span><span class="text-gray-300">Ocupada</span></span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
+                    <div id="mesas-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 xl:col-span-2 gap-3">
+                        <!-- Preenchido via JS -->
+                    </div>
+                    <aside id="mesa-details" class="bg-dark-card rounded-xl border border-dark-border p-4 space-y-4 min-h-40">
+                        <!-- Comanda da mesa selecionada -->
+                    </aside>
+                </div>
+            </section>
+
+            <!-- MÓDULO 5: KDS - COZINHA -->
+            <section id="tab-kds" class="tab-content hidden space-y-6">
+                <div class="flex justify-between items-center bg-dark-card p-4 rounded-xl border border-dark-border">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                            <i data-lucide="flame" class="w-5 h-5 text-gold-500"></i>
+                            <span>KDS - Monitor da Cozinha</span>
+                        </h2>
+                        <p class="text-xs text-gray-400">Tempo real de preparo dos pedidos.</p>
+                    </div>
+                    <span id="kds-count" class="text-xs bg-dark-bg border border-dark-border px-3 py-1 rounded text-gold-500 font-mono"></span>
+                </div>
+
+                <div id="kds-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </section>
+
+            <!-- MÓDULO 6: GESTÃO DE PEDIDOS -->
+            <section id="tab-pedidos" class="tab-content hidden space-y-6">
+                <div class="flex justify-between items-center bg-dark-card p-4 rounded-xl border border-dark-border">
+                    <h2 class="text-xl font-bold text-white">Últimos Pedidos Realizados</h2>
+                    <button id="clear-order-history" onclick="limparHistoricoPedidos()" class="hidden bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs px-3 py-2 rounded-lg font-semibold">Limpar histórico</button>
+                </div>
+
+                <div class="bg-dark-card rounded-xl border border-dark-border overflow-hidden">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-dark-bg text-gray-400 uppercase font-medium border-b border-dark-border">
+                            <tr>
+                                <th class="p-3">Pedido</th>
+                                <th class="p-3">Cliente</th>
+                                <th class="p-3">Bairro</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3">Total</th>
+                                <th class="p-3 text-right">Comandas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-list-body" class="divide-y divide-dark-border text-gray-300">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL DE CADASTRO / EDIÇÃO DE FUNCIONÁRIO -->
+    <div id="user-modal" class="fixed inset-0 z-50 bg-black/80 hidden items-center justify-center p-4">
+        <div class="bg-dark-card border border-dark-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <h3 id="user-modal-title" class="text-lg font-bold text-white">Novo Funcionário</h3>
+            
+            <input type="hidden" id="edit-user-id">
+            
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-gray-400 mb-1">Nome Completo</label>
+                    <input type="text" id="modal-user-name" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-gold-500">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Cargo / Perfil</label>
+                    <select id="modal-user-role" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-gold-500">
+                        <option value="ADMIN">ADMINISTRADOR</option>
+                        <option value="GARCOM">GARÇOM</option>
+                        <option value="CAIXA">CAIXA</option>
+                        <option value="GERENTE">GERENTE</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Código PIN (4 Dígitos)</label>
+                    <input type="password" id="modal-user-pin" maxlength="4" autocomplete="new-password" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-gray-200 font-mono tracking-widest focus:outline-none focus:border-gold-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeUserModal()" class="px-4 py-2 rounded-lg border border-dark-border text-xs text-gray-400 hover:text-white">Cancelar</button>
+                <button onclick="saveUser()" class="px-4 py-2 rounded-lg bg-gold-500 hover:bg-gold-600 text-black text-xs font-bold">Salvar Funcionário</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE LOGIN POR PIN -->
+    <div id="login-modal" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+        <div class="bg-dark-card border border-dark-border rounded-2xl w-full max-w-sm p-6 space-y-6 text-center shadow-2xl">
+            <div class="flex justify-center">
+                <div class="w-12 h-12 rounded-full bg-gold-500/20 flex items-center justify-center border border-gold-500">
+                    <i data-lucide="lock" class="w-6 h-6 text-gold-500"></i>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-lg font-bold text-white">Acesso ao Sistema</h3>
+                <p class="text-xs text-gray-400">Selecione seu nome e digite sua senha PIN</p>
+            </div>
+
+            <select id="login-user-select" class="w-full bg-dark-bg border border-dark-border text-sm rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-gold-500"></select>
+
+            <input type="password" id="pin-input" readonly maxlength="4" class="w-full bg-dark-bg border border-dark-border rounded-lg text-center font-mono text-2xl tracking-widest text-gold-500 py-2 focus:outline-none">
+
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="appendPin('1')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">1</button>
+                <button onclick="appendPin('2')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">2</button>
+                <button onclick="appendPin('3')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">3</button>
+                <button onclick="appendPin('4')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">4</button>
+                <button onclick="appendPin('5')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">5</button>
+                <button onclick="appendPin('6')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">6</button>
+                <button onclick="appendPin('7')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">7</button>
+                <button onclick="appendPin('8')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">8</button>
+                <button onclick="appendPin('9')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">9</button>
+                <button onclick="clearPin()" class="bg-red-500/10 text-red-400 hover:bg-red-500/20 py-3 rounded-lg font-bold text-xs">LIMPAR</button>
+                <button onclick="appendPin('0')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">0</button>
+                <button onclick="submitLogin()" class="bg-gold-500 text-black hover:bg-gold-600 py-3 rounded-lg font-bold text-xs">ENTRAR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="close-cash-modal" class="fixed inset-0 z-50 bg-black/80 hidden items-center justify-center p-4">
+        <div class="bg-dark-card border border-dark-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div>
+                <h3 class="text-lg font-bold text-white">Conferência e fechamento do caixa</h3>
+                <p id="close-cash-expected" class="text-xs text-gray-400 mt-1"></p>
+            </div>
+            <div class="space-y-3 text-xs">
+                <label class="block text-gray-300">Valor retirado no fechamento (R$)
+                    <input id="close-cash-withdrawal" type="number" min="0" step="0.01" value="0" oninput="updateCloseCashPreview()" class="mt-1 w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-gold-500">
+                </label>
+                <div class="flex justify-between border-t border-dark-border pt-3 font-bold text-white">
+                    <span>Ficará no caixa</span>
+                    <span id="close-cash-remaining" class="text-gold-400"></span>
+                </div>
+                <label class="block text-gray-300">Saldo inicial do próximo caixa (R$)
+                    <input id="close-cash-next-initial" type="number" min="0" step="0.01" value="15" class="mt-1 w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-gold-500">
+                </label>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeCashModal()" class="px-4 py-2 rounded-lg border border-dark-border text-xs text-gray-400 hover:text-white">Cancelar</button>
+                <button onclick="confirmCloseCash()" class="px-4 py-2 rounded-lg bg-gold-500 hover:bg-gold-600 text-black text-xs font-bold">Fechar e imprimir resumo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: MONTAR PIZZA -->
+    <div id="pizza-modal" class="no-print fixed inset-0 z-50 bg-black/80 hidden items-center justify-center p-4">
+        <div class="bg-dark-card border border-dark-border rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-dark-border flex justify-between items-center"><h3 class="font-bold text-white">Montar Pizza</h3><button onclick="closePizza()" class="text-gray-400 hover:text-white">✕</button></div>
+            <div id="pm-body" class="p-4 overflow-y-auto space-y-4 text-xs"></div>
+            <div class="p-4 border-t border-dark-border flex items-center justify-between"><span id="pm-total" class="font-bold text-gold-400"></span><button onclick="addPizza()" class="bg-gold-500 hover:bg-gold-600 text-black text-xs font-bold px-5 py-2.5 rounded-lg">ADICIONAR AO PEDIDO</button></div>
+        </div>
+    </div>
+
+    <button id="online-orders-button" onclick="openOnlineOrdersModal()" class="no-print hidden fixed bottom-5 right-5 z-40 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-xl">
+        <i class="fa-solid fa-bell mr-2"></i>Pedidos online <span id="online-orders-count" class="ml-1 rounded-full bg-white text-emerald-700 px-2 py-0.5">0</span>
+    </button>
+    <div id="online-orders-modal" class="no-print fixed inset-0 z-50 bg-black/80 hidden items-center justify-center p-4">
+        <div class="bg-dark-card border border-dark-border rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-dark-border flex items-center justify-between">
+                <div><h3 class="font-bold text-white">Pedidos do cardápio online</h3><p class="text-xs text-gray-400 mt-1">Aceite para enviar à cozinha ou recuse o pedido.</p></div>
+                <button onclick="closeOnlineOrdersModal()" class="text-gray-400 hover:text-white text-xl" aria-label="Fechar">✕</button>
+            </div>
+            <div id="online-orders-list" class="p-4 overflow-y-auto space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- ÁREA DE IMPRESSÃO TÉRMICA 80MM -->
+    <div id="print-area"></div>
+
+    <!-- JAVASCRIPT LOGIC INTEGRADA AO SUPABASE -->
+    <script>
+        const SUPABASE_URL = 'https://ciousuoedyezkltyfvqb.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_hts4YS3W97DfKWQQSq3XAw_zdgtNteA';
+
+        let supabaseInitError = null;
+        // Inicialização única e segura do cliente Supabase para evitar redeclarações
+        if (typeof window.supabaseClient === 'undefined' || !window.supabaseClient) {
+            window.supabaseClient = null;
+            if (!SUPABASE_KEY || SUPABASE_KEY === '******') {
+                supabaseInitError = new Error('Configure a chave pública (anon/publishable) do Supabase em SUPABASE_KEY.');
+            } else if (window.supabase && typeof window.supabase.createClient === 'function') {
+                try {
+                    window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                        auth: {
+                            persistSession: false,
+                            autoRefreshToken: false,
+                            detectSessionInUrl: false
+                        }
+                    });
+                } catch (error) {
+                    supabaseInitError = error;
+                    console.error('Não foi possível inicializar o Supabase:', error);
+                }
+            } else {
+                supabaseInitError = new Error('Biblioteca do Supabase não carregada.');
+            }
+        }
+        const supabaseClient = window.supabaseClient;
+
+        function setSupabaseStatus(message, connected = false) {
+            const status = document.getElementById('supabase-status');
+            if (!status) return;
+            status.textContent = message;
+            status.className = `flex items-center ${connected ? 'text-emerald-500' : 'text-red-400'}`;
+        }
+
+        function reportSupabaseError(action, error) {
+            const message = error?.message || String(error);
+            console.error(`${action}:`, error);
+            setSupabaseStatus('Supabase com erro');
+            alert(`${action}.\n\nO banco de dados não confirmou a operação: ${message}`);
+        }
+
+        // Usuários padrão (com Lucas configurado como ADMIN e PIN 1644)
+        let users = [
+            { id: 1, name: 'Lucas', role: 'ADMIN', pin: '1644', active: true },
+            { id: 2, name: 'Karine (Garçom)', role: 'GARCOM', pin: '2222', active: true },
+            { id: 3, name: 'William (Caixa)', role: 'CAIXA', pin: '3333', active: true }
+        ];
+
+        let currentUser = null;
+        let currentPinInput = '';
+        const ORDER_BRIDGE_URL = `${SUPABASE_URL}/functions/v1/order-bridge`;
+        let onlineOrdersLoading = false;
+        let onlineOrdersTimer = null;
+        let onlineAlarmTimer = null;
+        let onlinePendingOrderIds = new Set();
+        let onlineSeenPending = new Set();
+        let onlineAudioContext = null;
+        let lastOnlineOrderError = '';
+        let cashStatusSyncPending = false;
+        let realtimeOnlineOrdersChannel = null;
+
+        const defaultWhatsAppSample = `#️⃣ *Pedido Nº 3887*
+feito em 16/10/2026 21:15
+
+👤 *Lucas*
+📞 (77) 99121-4377
+
+🛵 *Endereço de entrega*
+Rua d quadra g bloco1 casa102, S/N
+Complemento: depois do segundo quebra mola , a direita ultima casa
+abacatao, Itapetinga/BA
+
+------ ITENS DO PEDIDO ------
+*2 x Pizza Família*
+- Calabresa
+- Frango Com Catupiry
+- Nordestina
+- Texas
+R$ 130,00
+
+*Valor final:* R$ 139,00
+💲 *Forma de pagamento*: Cartão de crédito`;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            if (supabaseClient) {
+                setSupabaseStatus('Supabase conectando...');
+            } else {
+                setSupabaseStatus('Supabase indisponível');
+                console.error('Supabase indisponível:', supabaseInitError);
+            }
+            initApp();
+            loadUsersFromSupabase();
+            document.getElementById('whatsapp-input').placeholder = defaultWhatsAppSample;
+            renderUsersTable();
+            renderCaixaLedger();
+            renderCaixaHistory();
+            renderMesasGrid();
+            renderOrdersList();
+            populateUserSelect();
+            updateRolePermissions();
+            loadStateFromSupabase();
+            initRealtimeOnlineOrders();
+            document.addEventListener('pointerdown', activateOnlineOrderAudio, { once: true });
+            document.addEventListener('keydown', activateOnlineOrderAudio, { once: true });
+        });
+
+        // Carrega utilizadores da tabela 'usuarios' do Supabase
+        async function loadUsersFromSupabase() {
+            if (!supabaseClient) return;
+            try {
+                const { data, error } = await supabaseClient.from('usuarios').select('*').eq('active', true);
+                if (error) {
+                    console.error('Erro ao carregar usuários do Supabase:', error);
+                    setSupabaseStatus('Supabase com erro');
+                    return;
+                }
+                setSupabaseStatus('Supabase On', true);
+                if (data && data.length > 0) {
+                    users = data;
+                    populateUserSelect();
+                    renderUsersTable();
+                }
+            } catch (err) {
+                console.error('Erro ao carregar usuários do Supabase:', err);
+                setSupabaseStatus('Supabase com erro');
+            }
+        }
+
+        // Carrega o estado geral da aplicação salvo no Supabase
+        async function loadStateFromSupabase() {
+            if (!supabaseClient) return;
+            try {
+                const { data, error } = await supabaseClient.from('app_state').select('data').eq('id', 'gp_state').single();
+                if (error && error.code !== 'PGRST116') {
+                    console.error('Erro ao carregar dados do Supabase:', error);
+                    setSupabaseStatus('Supabase com erro');
+                    return;
+                }
+                if (data && data.data) {
+                    S = data.data;
+                    S.menu = S.menu || JSON.parse(JSON.stringify(DEF));
+                    S.menu.promotionDays = Array.isArray(S.menu.promotionDays) ? S.menu.promotionDays : [3, 4];
+                    S.menu.promoPrices = S.menu.promoPrices && typeof S.menu.promoPrices === 'object' ? S.menu.promoPrices : {};
+                    normalizeCaixaState();
+                    renderAll();
+                    updateRolePermissions();
+                }
+            } catch (err) {
+                console.error('Erro ao carregar dados do Supabase:', err);
+                setSupabaseStatus('Supabase com erro');
+            }
+        }
+
+        // Persiste as alterações no localStorage e no Supabase
+        async function save() {
+            try {
+                localStorage.setItem(KEY, JSON.stringify(S));
+                if (supabaseClient) {
+                    const { error } = await supabaseClient.from('app_state').upsert({ id: 'gp_state', data: S, updated_at: new Date().toISOString() });
+                    if (error) {
+                        console.error('Erro ao salvar dados no Supabase:', error);
+                        setSupabaseStatus('Supabase com erro');
+                    }
+                }
+            } catch (e) {
+                console.error('Erro ao salvar:', e);
+                setSupabaseStatus('Supabase com erro');
+            }
+        }
+
+        async function persistCashStatusForOnlineOrders() {
+            if (!supabaseClient) throw new Error('Supabase indisponível; não foi possível sincronizar o status do caixa.');
+            localStorage.setItem(KEY, JSON.stringify(S));
+            const { error } = await supabaseClient.from('app_state').upsert({
+                id: 'gp_state',
+                data: S,
+                updated_at: new Date().toISOString()
+            });
+            if (error) throw error;
+        }
+
+        function updateRolePermissions() {
+            document.getElementById('user-display-name').innerText = currentUser?.name || 'Não autenticado';
+            document.getElementById('user-display-role').innerText = currentUser?.role || '';
+
+            const managerElements = document.querySelectorAll('.manager-only');
+            if (!currentUser || currentUser.role === 'GARCOM') {
+                managerElements.forEach(el => el.classList.add('hidden'));
+                if (currentUser?.role === 'GARCOM') switchTab('mesas');
+            } else {
+                managerElements.forEach(el => el.classList.remove('hidden'));
+            }
+            const menuNavButton = document.querySelector('button[onclick="switchTab(\'cardapio\')"]');
+            if (menuNavButton) menuNavButton.classList.toggle('hidden', !canManagePromotions());
+            if (!canManagePromotions() && !$('tab-cardapio').classList.contains('hidden')) {
+                switchTab(currentUser?.role === 'GARCOM' ? 'mesas' : 'caixa');
+            }
+
+            const adminRoleOption = document.querySelector('#modal-user-role option[value="ADMIN"]');
+            if (adminRoleOption) adminRoleOption.hidden = !isAdmin();
+            const managerRoleOption = document.querySelector('#modal-user-role option[value="GERENTE"]');
+            if (managerRoleOption) managerRoleOption.hidden = !isAdmin();
+            syncRealtimeOnlineOrders();
+        }
+
+        const isAdmin = () => currentUser?.role === 'ADMIN';
+        const canClearOrderHistory = () => ['ADMIN', 'GERENTE', 'CAIXA'].includes(currentUser?.role);
+        const canManagePromotions = () => ['ADMIN', 'GERENTE'].includes(currentUser?.role);
+
+        function canHandleOnlineOrders() {
+            return ['ADMIN', 'GERENTE', 'CAIXA'].includes(currentUser?.role);
+        }
+
+        async function callOrderBridge(action, extra = {}) {
+            const response = await fetch(ORDER_BRIDGE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+                body: JSON.stringify({
+                    action,
+                    userId: currentUser?.id,
+                    pin: String(currentUser?.pin || ''),
+                    ...extra
+                })
+            });
+            let result;
+            try {
+                result = await response.json();
+            } catch (error) {
+                throw new Error('Resposta inválida do servidor de pedidos online.');
+            }
+            if (!response.ok) throw new Error(result.error || `Falha no servidor (${response.status}).`);
+            return result;
+        }
+
+        function initRealtimeOnlineOrders() {
+            if (!supabaseClient || realtimeOnlineOrdersChannel) return;
+            realtimeOnlineOrdersChannel = supabaseClient
+                .channel('online-orders-notifications', { config: { private: false } })
+                .on('broadcast', { event: 'order-update' }, message => {
+                    const event = message.payload;
+                    if (!event || typeof event.orderId !== 'string') return;
+                    if (event.status === 'pending' && canHandleOnlineOrders() && !onlineSeenPending.has(event.orderId)) {
+                        onlineSeenPending.add(event.orderId);
+                        onlinePendingOrderIds.add(event.orderId);
+                        syncOnlineOrderAlert();
+                        toast('🔔 Novo pedido online recebido.');
+                        if (!$('online-orders-modal').classList.contains('hidden')) {
+                            refreshOnlineOrders();
+                        } else {
+                            openOnlineOrdersModal();
+                        }
+                        return;
+                    }
+                    if (canHandleOnlineOrders()) refreshOnlineOrders();
+                })
+                .subscribe(status => {
+                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        console.warn('Realtime de pedidos temporariamente indisponível; atualize os pedidos ao abrir o painel.');
+                    } else if (status === 'SUBSCRIBED' && canHandleOnlineOrders()) {
+                        refreshOnlineOrders();
+                    }
+                });
+        }
+
+        function syncRealtimeOnlineOrders() {
+            const button = $('online-orders-button');
+            const eligible = canHandleOnlineOrders();
+            button.classList.toggle('hidden', !eligible);
+            if (!eligible) {
+                if (onlineOrdersTimer) clearInterval(onlineOrdersTimer);
+                onlineOrdersTimer = null;
+                stopOnlineOrderAlert();
+                onlinePendingOrderIds.clear();
+                onlineSeenPending.clear();
+                $('online-orders-count').textContent = '0';
+                $('online-orders-list').innerHTML = '';
+                closeOnlineOrdersModal();
+                return;
+            }
+            refreshOnlineOrders();
+            if (!onlineOrdersTimer) {
+                onlineOrdersTimer = setInterval(refreshOnlineOrders, 8000);
+            }
+        }
+
+        async function refreshOnlineOrders() {
+            if (!canHandleOnlineOrders() || onlineOrdersLoading) return;
+            onlineOrdersLoading = true;
+            try {
+                const result = await callOrderBridge('staff_list');
+                const orders = result.orders || [];
+                const pending = orders.filter(order => order.status === 'pending');
+                const newPending = pending.filter(order => !onlineSeenPending.has(order.id));
+                newPending.forEach(order => onlineSeenPending.add(order.id));
+                onlinePendingOrderIds = new Set(pending.map(order => order.id));
+                syncOnlineOrderAlert();
+                if (newPending.length && $('online-orders-modal').classList.contains('hidden')) {
+                    openOnlineOrdersModal();
+                }
+
+                for (const order of orders) {
+                    if (order.status === 'accepted' && !order.pos_imported) {
+                        await importAcceptedOnlineOrder(order);
+                    }
+                }
+                $('online-orders-count').textContent = String(pending.length);
+                renderOnlineOrderQueue(pending);
+                lastOnlineOrderError = '';
+            } catch (error) {
+                console.error('Falha ao carregar pedidos online:', error);
+                if (lastOnlineOrderError !== error.message) toast(`Pedidos online: ${error.message}`);
+                lastOnlineOrderError = error.message;
+            } finally {
+                onlineOrdersLoading = false;
+            }
+        }
+
+        function playOnlineOrderAlert() {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) return;
+                onlineAudioContext = onlineAudioContext || new AudioContextClass();
+                if (onlineAudioContext.state === 'suspended') {
+                    onlineAudioContext.resume().catch(error =>
+                        console.warn('O navegador bloqueou o alerta sonoro:', error)
+                    );
+                    return;
+                }
+                [0, 0.22, 0.44].forEach((delay, index) => {
+                    const oscillator = onlineAudioContext.createOscillator();
+                    const gain = onlineAudioContext.createGain();
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = index === 1 ? 1046 : 784;
+                    gain.gain.setValueAtTime(0.0001, onlineAudioContext.currentTime + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.2, onlineAudioContext.currentTime + delay + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, onlineAudioContext.currentTime + delay + 0.18);
+                    oscillator.connect(gain);
+                    gain.connect(onlineAudioContext.destination);
+                    oscillator.start(onlineAudioContext.currentTime + delay);
+                    oscillator.stop(onlineAudioContext.currentTime + delay + 0.2);
+                });
+            } catch (error) {
+                console.warn('O alerta sonoro não pôde ser reproduzido:', error);
+            }
+        }
+
+        function activateOnlineOrderAudio() {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) return;
+                onlineAudioContext = onlineAudioContext || new AudioContextClass();
+                if (onlineAudioContext.state === 'suspended') {
+                    onlineAudioContext.resume().then(() => {
+                        if (onlinePendingOrderIds.size) playOnlineOrderAlert();
+                    }).catch(error => console.warn('Não foi possível ativar o áudio:', error));
+                }
+            } catch (error) {
+                console.warn('Não foi possível ativar o áudio:', error);
+            }
+        }
+
+        function syncOnlineOrderAlert() {
+            if (onlinePendingOrderIds.size === 0) {
+                stopOnlineOrderAlert();
+                return;
+            }
+            if (!onlineAlarmTimer) {
+                playOnlineOrderAlert();
+                onlineAlarmTimer = setInterval(() => {
+                    if (onlinePendingOrderIds.size === 0) stopOnlineOrderAlert();
+                    else playOnlineOrderAlert();
+                }, 4000);
+            }
+        }
+
+        function stopOnlineOrderAlert() {
+            if (onlineAlarmTimer) clearInterval(onlineAlarmTimer);
+            onlineAlarmTimer = null;
+        }
+
+        function renderOnlineOrderQueue(orders) {
+            const container = $('online-orders-list');
+            if (!container) return;
+            container.innerHTML = orders.map(order => {
+                const payload = order.payload || {};
+                const customer = payload.customer || {};
+                const items = (payload.items || []).map(item =>
+                    `<li>${Number(item.qty) || 0}x ${esc(item.name)} (${esc(item.size || 'Padrão')})${item.flavors?.length ? `<div class="pl-4 text-gray-400">${item.flavors.map(flavor => esc(flavor)).join(' + ')}</div>` : ''} — ${money((Number(item.qty) || 0) * (Number(item.price) || 0))}</li>`
+                ).join('');
+                const address = payload.deliveryType === 'delivery'
+                    ? `<p class="text-gray-300"><strong>Endereço:</strong> ${esc(payload.address || '')}${payload.complement ? ` — ${esc(payload.complement)}` : ''}</p>`
+                    : '<p class="text-gray-300"><strong>Retirada no balcão</strong></p>';
+                return `<article class="rounded-xl border border-dark-border bg-dark-bg p-4 space-y-2">
+                    <div class="flex flex-wrap justify-between gap-2"><strong class="text-white">${esc(customer.name || 'Cliente')} • ${esc(customer.phone || '')}</strong><span class="text-gold-400 font-bold">${money(payload.total)}</span></div>
+                    <ul class="list-disc pl-5 text-xs text-gray-300">${items}</ul>
+                    ${address}
+                    <p class="text-gray-400">Pagamento: ${esc(payload.payment || 'A combinar')} · Recebido ${order.created_at ? new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</p>
+                    <div class="flex gap-2 pt-1">
+                        <button onclick="acceptOnlineOrder('${esc(order.id)}')" class="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500">Aceitar e enviar à cozinha</button>
+                        <button onclick="rejectOnlineOrder('${esc(order.id)}')" class="rounded-lg bg-red-700 px-4 py-2 text-xs font-bold text-white hover:bg-red-600">Recusar</button>
+                    </div>
+                </article>`;
+            }).join('') || '<p class="py-8 text-center text-sm text-gray-400">Nenhum pedido online aguardando confirmação.</p>';
+        }
+
+        function openOnlineOrdersModal() {
+            if (!canHandleOnlineOrders()) return toast('Faça login como administrador, gerente ou caixa para ver os pedidos online.');
+            $('online-orders-modal').classList.remove('hidden');
+            $('online-orders-modal').classList.add('flex');
+            refreshOnlineOrders();
+        }
+
+        function closeOnlineOrdersModal() {
+            $('online-orders-modal').classList.add('hidden');
+            $('online-orders-modal').classList.remove('flex');
+        }
+
+        async function acceptOnlineOrder(orderId) {
+            if (!canHandleOnlineOrders()) return toast('Faça login como administrador, gerente ou caixa para aceitar pedidos online.');
+            let accepted = false;
+            try {
+                const result = await callOrderBridge('staff_accept', { orderId });
+                accepted = true;
+                onlinePendingOrderIds.delete(orderId);
+                syncOnlineOrderAlert();
+                await importAcceptedOnlineOrder(result.order);
+                toast('Pedido online aceito e enviado para a cozinha.');
+                await refreshOnlineOrders();
+            } catch (error) {
+                console.error(accepted ? 'Falha ao importar pedido online aceito:' : 'Falha ao aceitar pedido online:', error);
+                toast(accepted
+                    ? `Pedido aceito; sincronização com o PDV pendente e será tentada novamente. ${error.message}`
+                    : `Não foi possível aceitar: ${error.message}`);
+            }
+        }
+
+        async function rejectOnlineOrder(orderId) {
+            if (!canHandleOnlineOrders()) return toast('Faça login como administrador, gerente ou caixa para recusar pedidos online.');
+            const reason = prompt('Motivo da recusa (opcional):', '');
+            if (reason === null) return;
+            try {
+                await callOrderBridge('staff_reject', { orderId, reason });
+                onlineSeenPending.delete(orderId);
+                onlinePendingOrderIds.delete(orderId);
+                syncOnlineOrderAlert();
+                toast('Pedido online recusado.');
+                await refreshOnlineOrders();
+            } catch (error) {
+                console.error('Falha ao recusar pedido online:', error);
+                toast(`Não foi possível recusar: ${error.message}`);
+            }
+        }
+
+        async function importAcceptedOnlineOrder(onlineOrder) {
+            const payload = onlineOrder.payload || {};
+            const customer = payload.customer || {};
+            const existing = S.orders.find(order => order.onlineOrderId === onlineOrder.id);
+            if (!existing) {
+                const items = (payload.items || []).map(item => ({
+                    name: Array.isArray(item.flavors) && item.flavors.length
+                        ? `Pizza ${String(item.size || '')}`
+                        : String(item.name || 'Item online'),
+                    qty: Number(item.qty) || 1,
+                    price: Number(item.price) || 0,
+                    det: [
+                        ...(item.size && item.size !== 'Padrão' ? [`Tamanho: ${String(item.size)}`] : []),
+                        ...(Array.isArray(item.flavors) ? item.flavors.map(flavor => `Sabor: ${String(flavor)}`) : [])
+                    ],
+                    obs: ''
+                }));
+                const order = {
+                    type: payload.deliveryType === 'delivery' ? 'DELIVERY' : 'BALCAO',
+                    mesa: null,
+                    cli: String(customer.name || 'Cliente online'),
+                    tel: String(customer.phone || ''),
+                    end: String(payload.address || ''),
+                    bairro: 'Pedido online',
+                    items,
+                    taxa: Number(payload.deliveryFee) || 0,
+                    svc: 0,
+                    svcPct: S.menu.svc,
+                    by: 'Cardápio online',
+                    payPref: String(payload.payment || ''),
+                    onlineOrderId: onlineOrder.id
+                };
+                if (!items.length) throw new Error('O pedido online não contém itens válidos.');
+                if (!finalize(order, 'Pagar depois')) throw new Error('Não foi possível registrar o pedido no PDV.');
+            }
+
+            try {
+                localStorage.setItem(KEY, JSON.stringify(S));
+            } catch (error) {
+                throw new Error(`Não foi possível salvar o pedido no dispositivo: ${error.message}`);
+            }
+            if (!supabaseClient) throw new Error('Supabase indisponível; o pedido ficará pendente de sincronização.');
+            const { error } = await supabaseClient.from('app_state').upsert({
+                id: 'gp_state',
+                data: S,
+                updated_at: new Date().toISOString()
+            });
+            if (error) throw new Error(`Falha ao salvar o pedido no banco: ${error.message}`);
+
+            await callOrderBridge('staff_imported', { orderId: onlineOrder.id });
+        }
+
+        function switchTab(tabId) {
+            if (tabId === 'equipe' && !isAdmin() && currentUser?.role !== 'GERENTE') {
+                return toast('Apenas administradores e gerentes podem acessar a equipe.');
+            }
+            if (tabId === 'cardapio' && !canManagePromotions()) {
+                return toast('Apenas administrador e gerente podem alterar preços e promoções.');
+            }
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                const a = b.getAttribute('onclick') === `switchTab('${tabId}')`;
+                b.classList.toggle('bg-dark-hover', a); b.classList.toggle('text-gold-500', a);
+            });
+            if (tabId === 'cardapio') renderCardapioAdmin();
+            if (tabId === 'novo-pedido') renderMenu();
+            if (tabId === 'clientes') renderClientes();
+            lucide.createIcons();
+        }
+
+        function openLoginModal() {
+            currentPinInput = '';
+            document.getElementById('pin-input').value = '';
+            document.getElementById('login-modal').classList.remove('hidden');
+        }
+
+        function populateUserSelect() {
+            const select = document.getElementById('login-user-select');
+            const availableUsers = currentUser?.role === 'GERENTE' ? users.filter(user => user.role !== 'ADMIN') : users;
+            select.innerHTML = availableUsers.filter(u => u.active).map(u => `<option value="${u.id}">${esc(u.name)} (${esc(u.role)})</option>`).join('');
+        }
+
+        function appendPin(num) {
+            if (currentPinInput.length < 4) {
+                currentPinInput += num;
+                document.getElementById('pin-input').value = '*'.repeat(currentPinInput.length);
+            }
+        }
+
+        function clearPin() {
+            currentPinInput = '';
+            document.getElementById('pin-input').value = '';
+        }
+
+        function submitLogin() {
+            const selectedId = parseInt(document.getElementById('login-user-select').value);
+            const user = users.find(u => u.id === selectedId);
+
+            if (user && user.pin === currentPinInput) {
+                currentUser = user;
+                updateRolePermissions();
+                renderUsersTable();
+                renderOrdersList();
+                document.getElementById('login-modal').classList.add('hidden');
+            } else {
+                alert('PIN Incorreto! Tente novamente.');
+                clearPin();
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        // --- GESTÃO DE FUNCIONÁRIOS (ADICIONAR, EDITAR, EXCLUIR) ---
+        function renderUsersTable() {
+            const tbody = document.getElementById('users-table-body');
+            const visibleUsers = isAdmin() ? users : users.filter(user => user.role !== 'ADMIN');
+            tbody.innerHTML = visibleUsers.map(u => `
+                <tr class="hover:bg-dark-hover transition">
+                    <td class="p-4 font-semibold text-white">${esc(u.name)}</td>
+                    <td class="p-4"><span class="px-2 py-1 rounded text-[10px] font-bold bg-dark-bg border border-dark-border text-gold-500">${esc(u.role)}</span></td>
+                    <td class="p-4 font-mono text-xs">${isAdmin() ? `**** (${esc(u.pin)})` : '••••'}</td>
+                    <td class="p-4"><span class="text-xs ${u.active ? 'text-emerald-400' : 'text-red-400'}">${u.active ? 'Ativo' : 'Inativo'}</span></td>
+                    <td class="p-4 text-right space-x-2">
+                        ${isAdmin() ? `<button onclick="openUserModalForEdit(${Number(u.id)})" class="text-xs text-gold-400 hover:text-white font-medium">Editar</button>` : ''}
+                        <button onclick="deleteUser(${u.id})" class="text-xs text-red-400 hover:text-red-300 font-medium">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+            populateUserSelect();
+        }
+
+        function openUserModalForAdd() {
+            if (!isAdmin() && currentUser?.role !== 'GERENTE') {
+                return toast('Apenas administradores e gerentes podem cadastrar funcionários.');
+            }
+            document.getElementById('edit-user-id').value = '';
+            document.getElementById('modal-user-name').value = '';
+            document.getElementById('modal-user-role').value = 'GARCOM';
+            document.getElementById('modal-user-pin').value = '';
+            document.getElementById('user-modal-title').innerText = 'Novo Funcionário';
+            document.getElementById('user-modal').classList.remove('hidden');
+            document.getElementById('user-modal').classList.add('flex');
+        }
+
+        function openUserModalForEdit(id) {
+            if (!isAdmin()) return toast('Somente o administrador pode editar funcionários.');
+            const user = users.find(u => u.id === id);
+            if (!user) return;
+
+            document.getElementById('edit-user-id').value = user.id;
+            document.getElementById('modal-user-name').value = user.name;
+            document.getElementById('modal-user-role').value = user.role;
+            document.getElementById('modal-user-pin').value = user.pin;
+            document.getElementById('user-modal-title').innerText = 'Editar Funcionário';
+            document.getElementById('user-modal').classList.remove('hidden');
+            document.getElementById('user-modal').classList.add('flex');
+        }
+
+        function closeUserModal() {
+            document.getElementById('user-modal').classList.add('hidden');
+            document.getElementById('user-modal').classList.remove('flex');
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('edit-user-id').value;
+            const name = document.getElementById('modal-user-name').value.trim();
+            const role = document.getElementById('modal-user-role').value;
+            const pin = document.getElementById('modal-user-pin').value.trim();
+
+            if (!currentUser) return toast('Faça login para gerenciar funcionários.');
+            if (!isAdmin() && currentUser.role !== 'GERENTE') return toast('Seu perfil não pode gerenciar funcionários.');
+            if (!isAdmin() && id) return toast('Gerentes podem adicionar ou remover funcionários, não editá-los.');
+            if (!isAdmin() && !['GARCOM', 'CAIXA'].includes(role)) {
+                return toast('Gerentes só podem cadastrar garçons e operadores de caixa.');
+            }
+            if (!name || pin.length !== 4) {
+                alert('Preencha o nome e um PIN válido de 4 dígitos.');
+                return;
+            }
+
+            if (!supabaseClient) {
+                const message = supabaseInitError?.message || 'Verifique a conexão e a configuração do Supabase.';
+                alert(`Não foi possível salvar o funcionário no banco de dados.\n\n${message}`);
+                return;
+            }
+
+            const userData = { name, role, pin, active: true };
+            try {
+                if (id) {
+                    const { data, error } = await supabaseClient
+                        .from('usuarios')
+                        .update(userData)
+                        .eq('id', id)
+                        .select()
+                        .maybeSingle();
+                    if (error) {
+                        reportSupabaseError('Erro ao atualizar funcionário', error);
+                        return;
+                    }
+                    if (!data) {
+                        reportSupabaseError('Funcionário não encontrado ou sem permissão para atualizar', new Error('Nenhum registro foi atualizado.'));
+                        return;
+                    }
+                    const index = users.findIndex(user => String(user.id) === String(id));
+                    if (index !== -1) users[index] = data;
+                } else {
+                    const newId = users.length > 0 ? Math.max(...users.map(user => Number(user.id) || 0)) + 1 : 1;
+                    const { data, error } = await supabaseClient
+                        .from('usuarios')
+                        .insert([{ id: newId, ...userData }])
+                        .select()
+                        .single();
+                    if (error) {
+                        reportSupabaseError('Erro ao cadastrar funcionário', error);
+                        return;
+                    }
+                    users.push(data);
+                }
+            } catch (error) {
+                reportSupabaseError(id ? 'Erro ao atualizar funcionário' : 'Erro ao cadastrar funcionário', error);
+                return;
+            }
+
+            setSupabaseStatus('Supabase On', true);
+            closeUserModal();
+            renderUsersTable();
+        }
+
+        async function deleteUser(id) {
+            if (!currentUser) return toast('Faça login para gerenciar funcionários.');
+            if (!isAdmin() && currentUser.role !== 'GERENTE') return toast('Seu perfil não pode gerenciar funcionários.');
+            const target = users.find(user => String(user.id) === String(id));
+            if (!target) return toast('Funcionário não encontrado.');
+            if (!isAdmin() && target.role === 'ADMIN') return toast('Gerentes não podem remover nem consultar o administrador.');
+            if (users.length <= 1) {
+                alert('Não é possível excluir o último utilizador ativo do sistema.');
+                return;
+            }
+            if (confirm('Tem certeza que deseja remover este funcionário?')) {
+                if (!supabaseClient) {
+                    const message = supabaseInitError?.message || 'Verifique a conexão e a configuração do Supabase.';
+                    alert(`Não foi possível excluir o funcionário do banco de dados.\n\n${message}`);
+                    return;
+                }
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('usuarios')
+                        .delete()
+                        .eq('id', id)
+                        .select('id')
+                        .maybeSingle();
+                    if (error) {
+                        reportSupabaseError('Erro ao excluir funcionário', error);
+                        return;
+                    }
+                    if (!data) {
+                        reportSupabaseError('Funcionário não encontrado ou sem permissão para excluir', new Error('Nenhum registro foi removido.'));
+                        return;
+                    }
+                } catch (error) {
+                    reportSupabaseError('Erro ao excluir funcionário', error);
+                    return;
+                }
+                users = users.filter(u => String(u.id) !== String(id));
+                setSupabaseStatus('Supabase On', true);
+                renderUsersTable();
+            }
+        }
+
+        // ===================== CARDÁPIO / PEDIDOS / CAIXA =====================
+        const SIZES = ['Pequena', 'Média', 'Grande', 'Família'];
+        const PAYS = ['Dinheiro', 'PIX', 'Cartão de Crédito', 'Cartão de Débito'];
+        const PZ = [
+            ['Aeroporto','Mussarela, alho desidratado, champignon e tomate rodela'],['A Moda','Mussarela, ovo, frango, milho e bacon'],
+            ['Americana','Milho, bacon, cebola e mussarela'],['Argentina','Mussarela, tomate, parmesão e azeitona'],
+            ['Atum','Mussarela e atum'],['Bacalhau','Bacalhau, mussarela e azeitona'],
+            ['Brasileira','Mussarela, atum, azeitona, cebola e milho'],['Bacon','Mussarela e bacon'],
+            ['Bauru','Mussarela, presunto e rodelas de tomate'],['Calabresa','Mussarela e calabresa'],
+            ['Calabresa Acebolada','Mussarela, calabresa e cebola'],['Calamito','Calabresa, palmito, milho, mussarela e catupiry'],
+            ['Camarão','Azeitona, mussarela, cebola e camarão'],['Carioca','Mussarela, calabresa, bacon, catupiry e cebola'],
+            ['Catupiry','Mussarela e catupiry'],['Espanhola','Presunto, calabresa, palmito, azeitona, tomate e mussarela'],
+            ['Estrogonofe de Frango','Mussarela, frango em cubos, milho, creme de leite e batata palha'],['Frango','Mussarela e frango'],
+            ['Frango com Catupiry','Mussarela, frango e catupiry'],['Gabryelle','Mussarela, frango, creme de leite e milho'],
+            ['Lombinho','Mussarela e lombinho'],['Lombinho com Catupiry','Mussarela, lombinho e catupiry'],
+            ['Mexicana','Carne moída, pimenta desidratada, calabresa, tomate e mussarela'],['Milho','Mussarela e milho'],
+            ['Mussarela','Mussarela, tomate e cebola'],['Napolitana','Mussarela, palmito, milho, azeitona e presunto'],
+            ['Nordestina','Mussarela, carne seca, cebola e banana'],['Presunto','Mussarela e presunto'],
+            ['Palmito','Mussarela e palmito'],['Paulistinha','Frango desfiado, bacon e cheddar'],
+            ['Peito de Peru','Mussarela e peito de peru'],['Peito de Peru com Catupiry','Mussarela, peito de peru e catupiry'],
+            ['Portuguesa','Mussarela, presunto, palmito, ovo e azeitona'],['Quatro Queijos','Mussarela, gorgonzola, provolone e catupiry'],
+            ['Romana','Mussarela, calabresa, ovo, presunto e azeitona'],['Salaminho','Mussarela, salame e azeitona'],
+            ['Siciliana','Bacon, azeitona, cebola, mussarela e champignon'],['Suprema','Mussarela, carne desfiada, catupiry e barbecue'],
+            ['Texas','Mussarela, frango, bacon e molho barbecue'],['Tomate Seco','Tomate seco e catupiry'],
+            ['Tropically','Frango, abacaxi, mussarela e milho']
+        ];
+        const DOCE = [
+            ['Banana','Mussarela, banana, canela em pó e catupiry'],['Brigadeiro','Chocolate, granulado e mussarela'],
+            ['Nutella','Nutella, banana e mussarela'],['Romeu e Julieta','Goiabada, mussarela e creme de leite']
+        ];
+        
+        const DEF = {
+            pt: [0, 0, 0, 0], pd: [0, 0, 55, 65], mf: [4, 4, 4, 4], svc: 10,
+            ac: [['Borda de Catupiry',0],['Borda de Cheddar',0],['Azeitona',0],['Catupiry',0],['Cebola',0],['Cheddar',0],['Milho',0],['Palmito',0],['Tomate',0],['Queijo',0]],
+            cats: {
+                'Petiscos': [['Batata Frita Especial',30,'Molho rosê'],['Batata Simples',25,'Molho rosê'],['Batata com Frango em Cubos',0,''],['Batata com Calabresa',0,''],['Bolinho de Carne Seca',0,''],['Bolinho de Bacalhau',0,'8 unidades'],['Bolinho de Presunto e Queijo',0,'8 unidades'],['Carne do Sol com Aipim',0,''],['Coxinha',0,''],['Isca de Frango',0,'Molho rosê'],['Isca de Peixe',0,'Molho rosê']],
+                'Massas': ['Lasanha Bolonhesa','Lasanha de Frango Catupiry','Lasanha de Presunto','Espaguete à Bolonhesa','Escondidinho de Carne','Parmegiana de Frango','Parmegiana de Carne'].map(n => [n, 0, 'Arroz, purê ou macarrão']),
+                'Bebidas': [['Refrigerante Lata',6,'Sprite, Coca-Cola, Fanta e Guaraná'],['Refrigerante 1 Litro',11,'Coca-Cola e Guaraná'],['Red Bull',0,''],['Água Tônica',0,''],['Água c/ Gás',3.5,''],['Água s/ Gás',3,''],['H2O',8,'']],
+                'Sucos': ['Goiaba','Cajá','Manga','Abacaxi','Acerola','Maracujá','Laranja','Limão','Morango'].map(n => ['Suco de ' + n, 0, 'Jarra 750ml']),
+                'Drinks': [['Coquetel de Frutas',20,''],['Coquetel de Morango',20,''],['Nevada',20,''],['Pina Colada',0,''],['Limonada Suíça',18,''],['Cajarosca',20,''],['Morangorosca',20,''],['Caipirosca',18,''],['Caipirinha',15,''],['Caipirissima',0,''],['Gin Tropical',0,''],['Gin Especial Tônico',0,''],['Taça de Vinho',0,'']],
+                'Cervejas': [['Cerveja Skol 600ml',11,''],['Cerveja Devassa 600ml',10,''],['Cerveja Budweiser 600ml',12,''],['Cerveja Eisenbahn 600ml',0,''],['Cerveja Heineken 600ml',15,''],['Cerveja Itaipava 600ml',10,''],['Cerveja Itaipava Puro Malte 600ml',0,''],['Cerveja Brahma Puro Malte 600ml',0,''],['Cerveja Lata (Itaipava / Skol)',0,'']],
+                'Whisky e Destilados': ['Whisky Red Label','Whisky Black Label',"Whisky Teacher's",'Whisky Old Eight','Whisky White Horse','Whisky Chivas 12 Anos','Whisky Ballantines','Whisky Old Parr','Smirnoff Ice','Domec','Gim Nacional','Absolut','Campari','Bacardi'].map(n => [n, 0, ''])
+            }
+        };
+        const TABLE_COUNT = 50;
+        const KEY = 'gp_state_v1';
+        let S; try { S = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { S = {}; }
+        S.menu = S.menu || JSON.parse(JSON.stringify(DEF));
+        S.menu.promotionDays = Array.isArray(S.menu.promotionDays) ? S.menu.promotionDays : [3, 4];
+        S.menu.promoPrices = S.menu.promoPrices && typeof S.menu.promoPrices === 'object' ? S.menu.promoPrices : {};
+        if (S.menu.mf && S.menu.mf.join() === '1,2,2,3') S.menu.mf = [4, 4, 4, 4];
+        if (S.menu.svc === undefined) S.menu.svc = 10;
+        S.clientes = S.clientes || []; S.orders = S.orders || []; S.seq = S.seq || 1; S.caixa = S.caixa || newCaixa(); S.caixa.status = S.caixa.status || 'ABERTO'; S.caixaHistory = S.caixaHistory || [];
+        let cart = [], curCat = 'Pizzas', pm = null, selectedMesa = null, selectedCashHistoryId = null, expandedOrderId = null;
+
+        const $ = id => document.getElementById(id);
+        const money = v => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
+        const caixaAberto = () => S.caixa.status !== 'FECHADO';
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+        function toast(m) {
+            const d = document.createElement('div'); d.textContent = m;
+            d.className = 'no-print fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] bg-gold-500 text-black text-xs font-bold px-4 py-2 rounded-lg shadow-xl';
+            document.body.appendChild(d); setTimeout(() => d.remove(), 2400);
+        }
+        function newCaixa() { return { id: Math.floor(Math.random() * 9e6) + 1e6, at: new Date().toISOString(), initial: 15, movs: [], status: 'ABERTO' }; }
+
+        function normalizeCaixaState() {
+            S.orders = Array.isArray(S.orders) ? S.orders : [];
+            S.caixaHistory = Array.isArray(S.caixaHistory) ? S.caixaHistory : [];
+            S.caixa = S.caixa || newCaixa();
+            S.caixa.movs = Array.isArray(S.caixa.movs) ? S.caixa.movs : [];
+            S.caixa.status = S.caixa.status || 'ABERTO';
+            if (S.caixa.status !== 'FECHADO') return;
+
+            const closed = S.caixa;
+            const alreadyArchived = S.caixaHistory.some(session => String(session.id) === String(closed.id));
+            if (!alreadyArchived) {
+                const archived = JSON.parse(JSON.stringify(closed));
+                archived.closedAt = archived.closedAt || archived.closed?.at || archived.at;
+                archived.status = 'FECHADO';
+                archived.summary = archived.summary || caixaResumo(archived);
+                S.caixaHistory.push(archived);
+            }
+
+            const nextInitial = Number(closed.nextInitial ?? closed.remainingCash ?? 15);
+            S.caixa = {
+                ...newCaixa(),
+                status: 'FECHADO',
+                initial: Number.isFinite(nextInitial) && nextInitial >= 0 ? nextInitial : 15,
+                nextInitial: Number.isFinite(nextInitial) && nextInitial >= 0 ? nextInitial : 15
+            };
+        }
+
+        normalizeCaixaState();
+
+        function initApp() {
+            try { const su = JSON.parse(localStorage.getItem('gp_users')); if (su && su.length) users = su; } catch (e) {}
+            $('o-mesa').innerHTML = Array.from({ length: TABLE_COUNT }, (_, i) => `<option value="${i + 1}">Mesa ${i + 1}</option>`).join('');
+            $('o-pay').innerHTML = ['Pagar depois', ...PAYS].map(p => `<option>${p}</option>`).join('');
+            onTypeChange(); renderMenu(); renderKDS(); renderCardapioAdmin();
+            setInterval(renderKDS, 30000);
+        }
+        function onTypeChange() {
+            const t = $('o-type').value;
+            $('o-mesa').classList.toggle('hidden', t !== 'MESA');
+            $('o-del-box').classList.toggle('hidden', t !== 'DELIVERY');
+            $('o-pay').value = t === 'MESA' ? 'Pagar depois' : 'PIX';
+            renderCart();
+        }
+
+        // ---------- Cardápio (grade de itens) ----------
+        const PROMOTION_DAYS = [
+            { value: 0, label: 'Domingo' },
+            { value: 1, label: 'Segunda-feira' },
+            { value: 2, label: 'Terça-feira' },
+            { value: 3, label: 'Quarta-feira' },
+            { value: 4, label: 'Quinta-feira' },
+            { value: 5, label: 'Sexta-feira' },
+            { value: 6, label: 'Sábado' }
+        ];
+        function promotionPrice(key, regularPrice) {
+            const promo = Number(S.menu.promoPrices[key]);
+            const isPromotionDay = S.menu.promotionDays.includes(new Date().getDay());
+            return isPromotionDay && Number.isFinite(promo) && promo >= 0 && regularPrice > 0 && promo < regularPrice
+                ? promo
+                : regularPrice;
+        }
+
+        function menuItems() {
+            const M = S.menu, out = [];
+            PZ.forEach(p => out.push({ c: 'Pizzas', n: 'Pizza ' + p[0], f: p[0], d: p[1], pz: 0 }));
+            DOCE.forEach(p => out.push({ c: 'Pizzas Doces', n: 'Pizza ' + p[0], f: p[0], d: p[1], pz: 1 }));
+            Object.keys(M.cats).forEach((c, categoryIndex) => M.cats[c].forEach((it, itemIndex) => {
+                const key = `item:${categoryIndex}:${itemIndex}`;
+                out.push({ c, n: it[0], d: it[2], p: promotionPrice(key, it[1]), regularPrice: it[1] });
+            }));
+            return out;
+        }
+        function renderMenu() {
+            const q = $('menu-search').value.trim().toLowerCase(), all = menuItems();
+            const cats = ['Pizzas', 'Pizzas Doces', ...Object.keys(S.menu.cats)];
+            $('menu-cats').innerHTML = cats.map(c => `<button onclick="curCat='${c}';$('menu-search').value='';renderMenu()" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border ${c === curCat && !q ? 'bg-gold-500 text-black border-gold-500' : 'bg-dark-card border-dark-border text-gray-300 hover:text-gold-500'}">${c}</button>`).join('');
+            $('menu-grid').innerHTML = all.map((i, idx) => ({ i, idx })).filter(({ i }) => q ? (i.n + ' ' + i.d).toLowerCase().includes(q) : i.c === curCat).map(({ i, idx }) => {
+                const price = i.pz !== undefined ? '<span class="text-gray-400">Escolher tamanho</span>' : (i.p ? `<span class="${i.p !== i.regularPrice ? 'text-emerald-400' : 'text-gold-400'} font-bold">${money(i.p)}${i.p !== i.regularPrice ? ' • PROMOÇÃO' : ''}</span>` : '<span class="text-red-400">Sem preço</span>');
+                return `<button onclick="pick(${idx})" class="text-left bg-dark-card border border-dark-border hover:border-gold-500 rounded-xl p-3 transition"><div class="flex justify-between gap-2 text-sm font-semibold text-white"><span>${esc(i.n)}</span></div><div class="text-[11px] text-gray-400 min-h-[16px]">${esc(i.d)}</div><div class="text-xs mt-1">${price}</div></button>`;
+            }).join('') || '<p class="text-xs text-gray-500">Nenhum item encontrado.</p>';
+        }
+        function pick(idx) {
+            const i = menuItems()[idx];
+            if (i.pz !== undefined) return openPizza(i.f, i.pz);
+            if (!i.p) return toast('Item sem preço. Defina em Cardápio / Preços.');
+            addCart({ name: i.n, qty: 1, price: i.p, det: i.d && i.c !== 'Massas' && i.c !== 'Bebidas' ? [] : [], obs: '' });
+        }
+
+        // ---------- Montar pizza ----------
+        function openPizza(flavor, doce) {
+            pm = { d: doce, s: 2, fl: flavor ? [flavor] : [], ac: [], q: 1, o: '' };
+            pm.s = S.menu.mf[2] >= 1 ? 2 : 0; renderPM();
+            $('pizza-modal').classList.remove('hidden'); $('pizza-modal').classList.add('flex');
+        }
+        function closePizza() { $('pizza-modal').classList.add('hidden'); $('pizza-modal').classList.remove('flex'); }
+        function pmPrice() {
+            const M = S.menu, key = `pizza:${pm.d ? 'pd' : 'pt'}:${pm.s}`;
+            return promotionPrice(key, (pm.d ? M.pd : M.pt)[pm.s]) + pm.ac.reduce((a, i) => a + M.ac[i][1], 0);
+        }
+        function pmSet(k, v) {
+            pm[k] = v; if (k === 'd') pm.fl = [];
+            pm.fl = pm.fl.slice(0, S.menu.mf[pm.s]); renderPM();
+        }
+        function pmFl(n) {
+            const i = pm.fl.indexOf(n);
+            if (i >= 0) pm.fl.splice(i, 1);
+            else if (pm.fl.length >= S.menu.mf[pm.s]) toast(`Pizza ${SIZES[pm.s]}: máximo de ${S.menu.mf[pm.s]} sabor(es)`);
+            else pm.fl.push(n);
+            renderPM();
+        }
+        function pmAc(i) { const k = pm.ac.indexOf(i); k >= 0 ? pm.ac.splice(k, 1) : pm.ac.push(i); renderPM(); }
+        function renderPM() {
+            const M = S.menu, t = pm.d ? M.pd : M.pt, L = pm.d ? DOCE : PZ, sc = $('pm-body').scrollTop;
+            const tab = on => `flex-1 py-2 rounded-lg border text-center font-semibold ${on ? 'bg-gold-500 text-black border-gold-500' : 'border-dark-border text-gray-300'}`;
+            const lbl = 'text-gray-400 mb-1 font-semibold uppercase text-[10px]';
+            $('pm-body').innerHTML = `
+                <div class="flex gap-2"><button onclick="pmSet('d',0)" class="${tab(!pm.d)}">Salgada</button><button onclick="pmSet('d',1)" class="${tab(pm.d)}">Doce</button></div>
+                <div><div class="${lbl}">Tamanho</div><div class="grid grid-cols-4 gap-2">${SIZES.map((z, i) => { const price = promotionPrice(`pizza:${pm.d ? 'pd' : 'pt'}:${i}`, t[i]); return `<button onclick="pmSet('s',${i})" class="${tab(pm.s === i)}"><div>${z}</div><div class="font-normal">${price ? money(price) : 'sem preço'}${price !== t[i] ? ' • promo' : ''}</div></button>`; }).join('')}</div></div>
+                <div><div class="${lbl}">Sabores (${pm.fl.length}/${M.mf[pm.s]})</div><div class="space-y-1">${L.map(p => { const on = pm.fl.includes(p[0]); return `<label class="flex items-start gap-2 p-2 rounded-lg border cursor-pointer ${on ? 'border-gold-500 bg-gold-500/10' : 'border-dark-border'}"><input type="checkbox" ${on ? 'checked' : ''} onchange="pmFl('${p[0]}')" class="mt-0.5"><span><b class="text-white">${p[0]}</b><br><span class="text-gray-400">${p[1]}</span></span></label>`; }).join('')}</div></div>
+                <div><div class="${lbl}">Acréscimos</div><div class="grid grid-cols-2 gap-1">${M.ac.map((a, i) => `<label class="flex items-center gap-2 p-1.5 rounded border border-dark-border cursor-pointer"><input type="checkbox" ${pm.ac.includes(i) ? 'checked' : ''} onchange="pmAc(${i})"><span class="text-gray-200">${a[0]} <span class="text-gray-500">${a[1] ? '+' + money(a[1]) : ''}</span></span></label>`).join('')}</div></div>
+                <div><div class="grid grid-cols-3 gap-2"><div><div class="${lbl}">Qtd</div><input type="number" min="1" value="${pm.q}" oninput="pm.q=Math.max(1,+this.value||1);pmTot()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-gray-200"></div><div class="col-span-2"><div class="${lbl}">Observação</div><input value="${esc(pm.o)}" oninput="pm.o=this.value" placeholder="Ex: sem cebola, bem passada" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-gray-200"></div></div></div>`;
+            $('pm-body').scrollTop = sc; pmTot();
+        }
+        function pmTot() { $('pm-total').textContent = 'Total: ' + money(pmPrice() * pm.q); }
+        function addPizza() {
+            if (!pm.fl.length) return toast('Escolha pelo menos 1 sabor');
+            if (!pmPrice() || !(pm.d ? S.menu.pd : S.menu.pt)[pm.s]) return toast('Tamanho sem preço. Defina em Cardápio / Preços.');
+            addCart({ name: `Pizza ${SIZES[pm.s]}${pm.d ? ' Doce' : ''}`, qty: pm.q, price: pmPrice(), det: [...pm.fl, ...pm.ac.map(i => '+ ' + S.menu.ac[i][0])], obs: pm.o.trim() });
+            closePizza();
+        }
+
+        // ---------- Carrinho ----------
+        function addCart(x) {
+            const f = cart.find(c => c.name === x.name && !c.det.length && !x.det.length && c.obs === x.obs && c.price === x.price);
+            f ? f.qty += x.qty : cart.push(x); renderCart();
+        }
+        function qty(i, d) { cart[i].qty += d; if (cart[i].qty < 1) cart.splice(i, 1); renderCart(); }
+        function obsItem(i) { const o = prompt('Observação do item (ex: arroz, sem gelo):', cart[i].obs); if (o !== null) { cart[i].obs = o.trim(); renderCart(); } }
+        function cartTaxa() { return $('o-type').value === 'DELIVERY' ? (parseFloat($('o-taxa').value) || 0) : 0; }
+        function cartSub() { return cart.reduce((a, x) => a + x.qty * x.price, 0); }
+        function cartSvc() { return $('o-type').value === 'MESA' && $('o-svc').checked ? +(cartSub() * S.menu.svc / 100).toFixed(2) : 0; }
+        function renderCart() {
+            $('cart-list').innerHTML = cart.map((x, i) => `<div class="bg-dark-bg border border-dark-border rounded-lg p-2 text-xs"><div class="flex justify-between gap-2"><span class="font-semibold text-white">${x.qty}x ${esc(x.name)}</span><span class="text-gold-400 whitespace-nowrap">${money(x.qty * x.price)}</span></div>${x.det.map(d => `<div class="text-gray-400 pl-2">- ${esc(d)}</div>`).join('')}${x.obs ? `<div class="text-amber-400 pl-2">Obs: ${esc(x.obs)}</div>` : ''}<div class="flex gap-4 mt-1 text-gray-400"><button onclick="qty(${i},-1)">−</button><button onclick="qty(${i},1)">+</button><button onclick="obsItem(${i})" class="hover:text-gold-500">obs</button><button onclick="cart.splice(${i},1);renderCart()" class="text-red-400 ml-auto">remover</button></div></div>`).join('') || '<p class="text-xs text-gray-500 text-center py-4">Nenhum item adicionado</p>';
+            const svc = cartSvc(), mesa = $('o-type').value === 'MESA';
+            $('cart-svc-row').classList.toggle('hidden', !mesa); $('svc-pct').textContent = S.menu.svc; $('cart-svc').textContent = money(svc);
+            $('cart-total').textContent = money(cartSub() + cartTaxa() + svc);
+        }
+
+        // ---------- Pedidos ----------
+        const where = o => o.type === 'MESA' ? 'Mesa ' + o.mesa : o.type === 'DELIVERY' ? 'Delivery' : 'Balcão';
+        function finalize(o, pay) {
+            if (pay && pay !== 'Pagar depois' && !caixaAberto()) {
+                toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
+                return null;
+            }
+            o.id = o.id || S.seq; S.seq = Math.max(S.seq, o.id + 1);
+            o.at = Date.now(); o.status = 'PENDENTE'; o.paid = false;
+            o.sub = o.items.reduce((a, x) => a + x.qty * x.price, 0); o.total = +(o.sub + (o.taxa || 0) + (o.svc || 0)).toFixed(2);
+            S.orders.push(o);
+            if (o.type === 'DELIVERY') upsertCli(o);
+            if (pay && pay !== 'Pagar depois') payOrder(o, pay);
+            renderAll(); return o;
+        }
+        function payOrder(o, p) {
+            if (!caixaAberto()) {
+                toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
+                return false;
+            }
+            o.paid = true; o.pay = p;
+            S.caixa.movs.push({ t: Date.now(), type: 'Venda', desc: `Pedido Nº ${o.id} (${where(o)})`, pay: p, v: o.total, orderId: o.id, orderType: o.type, by: o.by || '' });
+            return true;
+        }
+        function createOrder() {
+            if (!cart.length) return toast('Adicione itens ao pedido');
+            const type = $('o-type').value;
+            const payment = $('o-pay').value;
+            if (payment !== 'Pagar depois' && !caixaAberto()) return toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
+            const o = { type, mesa: type === 'MESA' ? +$('o-mesa').value : null, cli: $('o-cli').value.trim(), tel: $('o-tel').value.trim(), end: $('o-end').value.trim(), bairro: $('o-bairro').value.trim(), items: cart.map(x => ({ ...x })), taxa: cartTaxa(), svc: cartSvc(), svcPct: S.menu.svc, by: currentUser.name };
+            if (type === 'DELIVERY' && (!o.cli || !o.end)) return toast('Delivery: informe nome e endereço');
+            if (type === 'DELIVERY' && cliLoaded && !$('o-conf').checked) return toast('Confirme o endereço com o cliente');
+            finalize(o, $('o-pay').value);
+            cart = []; ['o-cli', 'o-tel', 'o-end', 'o-bairro', 'o-taxa', 'o-busca'].forEach(id => $(id).value = ''); cliLoaded = false; $('o-conf').checked = false; $('o-conf-box').classList.add('hidden'); $('o-busca-res').classList.add('hidden'); renderCart();
+            toast(`Pedido #${o.id} enviado para a cozinha`);
+            if ($('o-print').checked) printThermal('kitchen', o.id);
+        }
+        function askPay() { const r = prompt('Forma de pagamento:\n1 - Dinheiro\n2 - PIX\n3 - Cartão de Crédito\n4 - Cartão de Débito'); return PAYS[(+r) - 1]; }
+        function receive(id) {
+            if (!caixaAberto()) return toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
+            const o = S.orders.find(x => x.id === id); if (!o || o.paid) return;
+            const p = (o.payPref && confirm(`Receber ${money(o.total)} em ${o.payPref}?\nOK = confirmar | Cancelar = escolher outra forma`)) ? o.payPref : askPay();
+            if (!p || !payOrder(o, p)) return; renderAll();
+        }
+        function cancelOrder(id) { const o = S.orders.find(x => x.id === id); if (o && !o.paid && confirm(`Cancelar pedido #${id}?`)) { o.status = 'CANCELADO'; renderAll(); } }
+        function kdsDone(id) { const o = S.orders.find(x => x.id === id); if (o) { o.status = 'PRONTO'; renderAll(); } }
+        function stLabel(o) {
+            if (o.status === 'CANCELADO') return ['Cancelado', 'red'];
+            if (o.paid && o.status !== 'PENDENTE') return ['Concluído', 'emerald'];
+            if (o.type === 'MESA') return o.paid ? ['Concluído', 'emerald'] : ['Aberta', 'gold'];
+            if (o.status === 'PENDENTE') return ['Em preparação', 'gold'];
+            return ['Pronto • a receber', 'sky'];
+        }
+        function renderAll() { renderOrdersList(); renderKDS(); renderMesasGrid(); renderCaixaLedger(); renderCaixaHistory(); save(); }
+
+        function renderOrdersList() {
+            $('clear-order-history').classList.toggle('hidden', !canClearOrderHistory());
+            $('orders-list-body').innerHTML = S.orders.slice().reverse().map(o => {
+                const [l, c] = stLabel(o), live = o.status !== 'CANCELADO';
+                const items = (o.items || []).map(item => `
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-1 border-b border-dark-border py-2 last:border-b-0">
+                        <div>
+                            <div class="font-semibold text-white">${Number(item.qty) || 0}x ${esc(item.name)}</div>
+                            ${(item.det || []).map(detail => `<div class="pl-3 text-gray-400">- ${esc(detail)}</div>`).join('')}
+                            ${item.obs ? `<div class="pl-3 text-amber-400">Obs: ${esc(item.obs)}</div>` : ''}
+                        </div>
+                        <span class="text-gray-300 whitespace-nowrap">${money((Number(item.qty) || 0) * (Number(item.price) || 0))}</span>
+                    </div>`).join('') || '<p class="py-2 text-gray-400">Este pedido não possui itens registrados.</p>';
+                const details = `<tr class="bg-dark-bg/70"><td colspan="6" class="px-4 pb-4">
+                    <div class="rounded-lg border border-dark-border p-3 space-y-3 text-xs">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-gray-400">
+                            <div>Pedido criado: <span class="text-gray-200">${o.at ? new Date(o.at).toLocaleString('pt-BR') : '—'}</span></div>
+                            <div>Atendente: <span class="text-gray-200">${esc(o.by || '—')}</span></div>
+                            ${o.type === 'DELIVERY' ? `<div>Telefone: <span class="text-gray-200">${esc(o.tel || '—')}</span></div><div>Endereço: <span class="text-gray-200">${esc(o.end || '—')}</span></div><div>Bairro: <span class="text-gray-200">${esc(o.bairro || '—')}</span></div>` : ''}
+                        </div>
+                        <div class="border-t border-dark-border pt-2">${items}</div>
+                        <div class="ml-auto max-w-xs space-y-1 border-t border-dark-border pt-2 text-gray-400">
+                            <div class="flex justify-between"><span>Subtotal</span><span>${money(o.sub ?? (o.items || []).reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.price) || 0), 0))}</span></div>
+                            ${o.taxa ? `<div class="flex justify-between"><span>Taxa de entrega</span><span>${money(o.taxa)}</span></div>` : ''}
+                            ${o.svc ? `<div class="flex justify-between"><span>Serviço</span><span>${money(o.svc)}</span></div>` : ''}
+                            <div class="flex justify-between font-bold text-white"><span>Total</span><span class="text-gold-400">${money(o.total)}</span></div>
+                            <div class="flex justify-between"><span>Pagamento</span><span>${esc(o.paid ? o.pay : o.payPref || 'A receber')}</span></div>
+                        </div>
+                    </div>
+                </td></tr>`;
+                return `<tr class="hover:bg-dark-hover"><td class="p-3 font-bold text-gold-500">#${o.id}</td><td class="p-3 font-medium text-white">${esc(o.type === 'DELIVERY' ? o.cli : where(o))}<div class="text-[10px] text-gray-500">${esc(o.by || '')}</div></td><td class="p-3 text-gray-400">${esc(o.bairro || '-')}</td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${c}-500/10 text-${c}-400">${l}</span>${o.paid ? `<div class="text-[10px] text-gray-500 mt-1">${esc(o.pay)}</div>` : ''}</td><td class="p-3 font-bold text-white">${money(o.total)}</td><td class="p-3 text-right space-x-1 whitespace-nowrap"><button onclick="toggleOrderDetails(${o.id})" class="bg-dark-bg border border-dark-border text-xs px-2 py-1 rounded">${expandedOrderId === o.id ? 'Ocultar' : 'Ver pedido'}</button><button onclick="printThermal('kitchen',${o.id})" class="bg-dark-bg border border-dark-border text-xs px-2 py-1 rounded">Cozinha</button><button onclick="printThermal('caixa',${o.id})" class="bg-dark-bg border border-dark-border text-xs px-2 py-1 rounded">Caixa</button>${live && !o.paid ? `<button onclick="receive(${o.id})" class="bg-gold-500 text-black text-xs font-bold px-2 py-1 rounded">Receber</button><button onclick="cancelOrder(${o.id})" class="text-red-400 text-xs px-1">✕</button>` : ''}</td></tr>${expandedOrderId === o.id ? details : ''}`;
+            }).join('') || '<tr><td colspan="6" class="p-6 text-center text-gray-500">Nenhum pedido ainda</td></tr>';
+        }
+        function limparHistoricoPedidos() {
+            if (!canClearOrderHistory()) return toast('Apenas administrador, gerente ou caixa podem limpar o histórico de pedidos.');
+            const isActiveOrder = order => order.status !== 'CANCELADO' && (!order.paid || order.status === 'PENDENTE');
+            const historicalOrders = S.orders.filter(order => !isActiveOrder(order));
+            if (!historicalOrders.length) return toast('Não há pedidos concluídos ou cancelados para limpar.');
+            if (!confirm(`Serão removidos ${historicalOrders.length} pedido(s) concluído(s) ou cancelado(s). Pedidos em preparação ou aguardando pagamento serão mantidos. Deseja continuar?`)) return;
+
+            const orderSnapshots = new Map(historicalOrders.filter(order => order.paid).map(order => [
+                String(order.id),
+                JSON.parse(JSON.stringify({
+                    type: order.type,
+                    sub: order.sub,
+                    total: order.total,
+                    taxa: order.taxa,
+                    svc: order.svc,
+                    items: order.items,
+                    by: order.by
+                }))
+            ]));
+            [S.caixa, ...S.caixaHistory].forEach(session => {
+                (session.movs || []).forEach(movement => {
+                    if (movement.type === 'Venda' && orderSnapshots.has(String(movement.orderId))) {
+                        movement.orderSnapshot = orderSnapshots.get(String(movement.orderId));
+                    }
+                });
+            });
+
+            S.orders = S.orders.filter(isActiveOrder);
+            expandedOrderId = null;
+            renderAll();
+            toast(`${historicalOrders.length} pedido(s) removido(s) do histórico.`);
+        }
+        function toggleOrderDetails(id) {
+            expandedOrderId = expandedOrderId === id ? null : id;
+            renderOrdersList();
+        }
+        function renderKDS() {
+            const p = S.orders.filter(o => o.status === 'PENDENTE');
+            $('kds-count').textContent = p.length + (p.length === 1 ? ' Pedido Pendente' : ' Pedidos Pendentes');
+            $('kds-cards-container').innerHTML = p.map(o => { const min = Math.floor((Date.now() - o.at) / 60000);
+                return `<div class="bg-dark-card rounded-xl border border-gold-500/40 p-4 space-y-3"><div class="flex justify-between items-center border-b border-dark-border pb-2"><span class="text-lg font-bold text-white">${where(o)} <span class="text-xs text-gray-500">#${o.id}</span></span><span class="text-xs ${min > 25 ? 'bg-red-500/20 text-red-400' : 'bg-gold-500/20 text-gold-400'} px-2 py-0.5 rounded font-mono font-bold">${min} min</span></div><div class="text-xs text-gray-300 space-y-2">${o.items.map(x => `<div><div class="font-bold text-gold-400">${x.qty}x ${esc(x.name)}</div>${x.det.map(d => `<div class="pl-2 border-l-2 border-dark-border text-gray-400">${esc(d)}</div>`).join('')}${x.obs ? `<div class="pl-2 text-amber-400">OBS: ${esc(x.obs)}</div>` : ''}</div>`).join('')}</div><button onclick="kdsDone(${o.id})" class="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-bold py-2 rounded text-xs transition">PRONTO / EXPEDIR</button></div>`; }).join('') || '<p class="text-xs text-gray-500">Nenhum pedido pendente.</p>';
+        }
+
+        // ---------- Mesas ----------
+        function renderMesasGrid() {
+            let h = '';
+            for (let i = 1; i <= TABLE_COUNT; i++) {
+                const os = S.orders.filter(o => o.type === 'MESA' && o.mesa === i && !o.paid && o.status !== 'CANCELADO'), occ = os.length, tot = os.reduce((a, o) => a + o.total, 0);
+                h += `<button type="button" onclick="mesaClick(${i})" aria-pressed="${selectedMesa === i}" class="p-3 rounded-xl border ${occ ? 'bg-gold-500/15 border-gold-500 text-gold-500' : 'bg-dark-card border-dark-border text-gray-400'} ${selectedMesa === i ? 'ring-2 ring-gold-400' : ''} flex flex-col items-center justify-center cursor-pointer"><span class="text-[10px] uppercase font-bold">Mesa</span><span class="text-lg font-bold text-white">${String(i).padStart(2, '0')}</span><span class="text-[9px] mt-1">${occ ? 'ABERTA<br>' + money(tot) : 'Livre'}</span></button>`;
+            }
+            $('mesas-grid').innerHTML = h;
+            renderMesaDetails();
+        }
+        function mesaClick(n) {
+            selectedMesa = n;
+            renderMesasGrid();
+        }
+        function mesaOrders(n) {
+            return S.orders.filter(o => o.type === 'MESA' && o.mesa === n && !o.paid && o.status !== 'CANCELADO');
+        }
+        function renderMesaDetails() {
+            const panel = $('mesa-details');
+            if (!panel) return;
+            if (selectedMesa === null) {
+                panel.innerHTML = '<h3 class="font-bold text-sm text-gold-500">COMANDA DA MESA</h3><p class="text-xs text-gray-400">Selecione uma mesa para consultar o pedido completo.</p>';
+                return;
+            }
+
+            const orders = mesaOrders(selectedMesa);
+            const total = orders.reduce((sum, o) => sum + o.total, 0);
+            const items = orders.map(o => `
+                <div class="border-t border-dark-border pt-3 space-y-2">
+                    <div class="flex justify-between gap-2 text-xs">
+                        <span class="font-bold text-white">Pedido #${o.id}</span>
+                        <span class="text-gray-400">${new Date(o.at).toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div class="text-[10px] text-gray-500">Atendido por ${esc(o.by || '—')} • ${esc(stLabel(o)[0])}</div>
+                    ${o.items.map(x => `<div class="text-xs"><div class="flex justify-between gap-2"><span class="font-semibold text-gray-200">${x.qty}x ${esc(x.name)}</span><span class="text-gold-400 whitespace-nowrap">${money(x.qty * x.price)}</span></div>${x.det.map(d => `<div class="pl-2 text-gray-400">- ${esc(d)}</div>`).join('')}${x.obs ? `<div class="pl-2 text-amber-400">Obs: ${esc(x.obs)}</div>` : ''}</div>`).join('')}
+                    ${(o.taxa || o.svc) ? `<div class="space-y-1 border-t border-dark-border pt-2 text-xs">${o.taxa ? `<div class="flex justify-between text-gray-400"><span>Taxa de entrega</span><span>${money(o.taxa)}</span></div>` : ''}${o.svc ? `<div class="flex justify-between text-gray-400"><span>Serviço</span><span>${money(o.svc)}</span></div>` : ''}</div>` : ''}
+                    <div class="flex justify-between text-xs font-bold text-white"><span>Total do pedido</span><span>${money(o.total)}</span></div>
+                </div>`).join('');
+
+            panel.innerHTML = `<div class="flex items-center justify-between"><h3 class="font-bold text-sm text-gold-500">MESA ${String(selectedMesa).padStart(2, '0')}</h3><span class="text-[10px] ${orders.length ? 'text-gold-400' : 'text-emerald-400'}">${orders.length ? 'EM ABERTO' : 'LIVRE'}</span></div>
+                ${orders.length ? `<div class="max-h-[55vh] overflow-y-auto pr-1 space-y-3">${items}</div><div class="border-t border-dark-border pt-3 flex justify-between font-bold text-white"><span>TOTAL DA CONTA</span><span class="text-gold-400">${money(total)}</span></div>
+                <button onclick="fecharMesa(${selectedMesa})" class="w-full bg-emerald-500 hover:bg-emerald-600 text-black text-xs font-bold py-2.5 rounded-lg transition">FECHAR MESA / RECEBER CONTA</button>` : '<p class="text-xs text-gray-400">Esta mesa não possui pedidos em aberto.</p>'}
+                <button onclick="adicionarItensMesa(${selectedMesa})" class="w-full bg-dark-bg border border-dark-border hover:border-gold-500 text-gray-200 text-xs font-semibold py-2.5 rounded-lg transition">ADICIONAR ITENS À MESA</button>`;
+        }
+        function adicionarItensMesa(n) {
+            $('o-type').value = 'MESA';
+            $('o-mesa').value = n;
+            onTypeChange();
+            switchTab('novo-pedido');
+        }
+        function fecharMesa(n) {
+            if (!caixaAberto()) return toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
+            const orders = mesaOrders(n);
+            if (!orders.length) return toast('Esta mesa não possui pedidos em aberto');
+            const total = orders.reduce((sum, o) => sum + o.total, 0);
+            if (!confirm(`Fechar a conta da Mesa ${n} no valor de ${money(total)}?`)) return;
+            const payment = askPay();
+            if (!payment) return;
+            for (const order of orders) if (!payOrder(order, payment)) return;
+            renderAll();
+            toast(`Mesa ${n} fechada com sucesso`);
+        }
+
+        // ---------- Caixa ----------
+        function caixaResumo(c) {
+            const movs = c.movs || [], sales = movs.filter(m => m.type === 'Venda');
+            const sumType = type => movs.filter(m => m.type === type).reduce((sum, m) => sum + Number(m.v || 0), 0);
+            const byPayment = Object.fromEntries(PAYS.map(pay => [pay, sales.filter(m => m.pay === pay).reduce((sum, m) => sum + Number(m.v || 0), 0)]));
+            const summary = {
+                supplies: sumType('Suprimento'),
+                withdrawals: sumType('Sangria'),
+                sales: sales.reduce((sum, m) => sum + Number(m.v || 0), 0),
+                byPayment,
+                drawerCash: Number(c.initial || 0) + sumType('Suprimento') - sumType('Sangria') + (byPayment.Dinheiro || 0),
+                delivery: { total: 0, products: 0, deliveryFee: 0, serviceFee: 0, byPayment: Object.fromEntries(PAYS.map(pay => [pay, 0])) },
+                tables: { total: 0, products: 0, deliveryFee: 0, serviceFee: 0, byPayment: Object.fromEntries(PAYS.map(pay => [pay, 0])) },
+                counter: { total: 0, products: 0, deliveryFee: 0, serviceFee: 0, byPayment: Object.fromEntries(PAYS.map(pay => [pay, 0])) },
+                attendants: {}
+            };
+
+            sales.forEach(m => {
+                const orderId = m.orderId || Number((m.desc || '').match(/Pedido Nº (\d+)/)?.[1]);
+                const order = S.orders.find(o => o.id === orderId) || m.orderSnapshot;
+                if (!order) return;
+                const type = order.type || m.orderType;
+                const products = Number(order.sub ?? (order.items || []).reduce((sum, item) => sum + item.qty * item.price, 0));
+                const amount = Number(m.v || order.total || 0);
+                const pay = m.pay || order.pay;
+                const category = type === 'DELIVERY' ? summary.delivery : type === 'MESA' ? summary.tables : summary.counter;
+                category.total += amount;
+                category.products += products;
+                if (category.byPayment[pay] !== undefined) category.byPayment[pay] += amount;
+                if (type === 'DELIVERY') category.deliveryFee += Number(order.taxa || 0);
+                category.serviceFee += Number(order.svc || 0);
+                const attendant = order.by || m.by || 'Não informado';
+                summary.attendants[attendant] = (summary.attendants[attendant] || 0) + amount;
+            });
+            return summary;
+        }
+        function caixaDateKey(value) {
+            const date = new Date(value);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+        function caixaDateLabel(key) {
+            const [year, month, day] = key.split('-').map(Number);
+            return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
+        }
+        function caixaDateTime(value) { return new Date(value).toLocaleString('pt-BR'); }
+        function caixaClosedAt(c) { return c.closedAt || c.closed?.at || null; }
+        function caixaRelatorioHtml(c) {
+            const summary = c.summary || caixaResumo(c);
+            const row = (label, value, cls = 'text-gray-300') => `<div class="flex justify-between gap-3 ${cls}"><span>${label}</span><span class="font-medium text-right">${value}</span></div>`;
+            const methodRows = obj => PAYS.map(pay => row(esc(pay), money(obj.byPayment[pay] || 0))).join('');
+            const category = (title, data, includeFee) => `<div class="space-y-1.5 border-t border-dark-border pt-3"><h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-400">${title}</h4>${methodRows(data)}${row('Valor dos produtos', money(data.products))}${includeFee ? row('Taxa de entrega', money(data.deliveryFee)) : ''}${data.serviceFee ? row('Serviço', money(data.serviceFee)) : ''}${row('Total', money(data.total), 'font-bold text-white')}</div>`;
+            const attendants = Object.entries(summary.attendants).sort((a, b) => b[1] - a[1]).map(([name, value]) => row(esc(name), money(value))).join('') || '<p class="text-xs text-gray-500">Sem vendas por atendente.</p>';
+            const withdrawal = Number(c.withdrawal || 0);
+            const remaining = c.remainingCash === undefined ? summary.drawerCash : Number(c.remainingCash);
+            return `<div class="space-y-4 text-xs">
+                <div class="flex items-start justify-between gap-3"><div><h3 class="font-bold text-sm text-gold-500">RESUMO DO CAIXA</h3><p class="text-gray-400 mt-1">Sessão ${esc(c.id)} • aberto em ${caixaDateTime(c.at)}</p></div><span class="rounded bg-red-500/10 px-2 py-1 text-[10px] font-bold text-red-400">FECHADO</span></div>
+                <p class="text-gray-400">Fechado em ${caixaDateTime(caixaClosedAt(c))}${c.closedBy ? ` • por ${esc(c.closedBy)}` : ''}</p>
+                <div class="flex flex-wrap gap-2"><button onclick="printCaixaHistorico('${esc(String(c.id))}')" class="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-xs text-gray-200 hover:border-gold-500">Imprimir resumo</button><button onclick="voltarCaixaAtual()" class="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-xs text-gray-200 hover:border-gold-500">Voltar ao caixa atual</button></div>
+                <div class="space-y-1.5 border-t border-dark-border pt-3"><h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Resumo do caixa</h4>
+                    ${row('Saldo inicial', money(c.initial))}${row('Suprimentos', money(summary.supplies))}${row('Sangrias', '- ' + money(summary.withdrawals))}${row('Vendas em dinheiro', money(summary.byPayment.Dinheiro || 0))}${row('Valor em caixa', money(summary.drawerCash), 'font-bold text-white')}${row('Retirado no fechamento', money(withdrawal))}${row('Ficou no caixa', money(remaining), 'font-bold text-gold-400')}
+                </div>
+                <div class="space-y-1.5 border-t border-dark-border pt-3"><h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Resumo das vendas</h4>${methodRows(summary)}${row('Total', money(summary.sales), 'font-bold text-white')}</div>
+                ${category('Vendas delivery', summary.delivery, true)}
+                ${category('Vendas mesas', summary.tables, false)}
+                ${category('Vendas balcão', summary.counter, false)}
+                <div class="space-y-1.5 border-t border-dark-border pt-3"><h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Vendas por atendente</h4>${attendants}</div>
+            </div>`;
+        }
+        function renderCaixaLedger() {
+            const c = S.caixa, isOpen = caixaAberto(), m = isOpen ? c.movs || [] : [];
+            const sum = t => m.filter(x => x.type === t).reduce((a, x) => a + x.v, 0);
+            const by = p => m.filter(x => x.type === 'Venda' && x.pay === p).reduce((a, x) => a + x.v, 0);
+            const sup = sum('Suprimento'), sang = sum('Sangria'), din = by('Dinheiro'), tot = sum('Venda');
+            $('caixa-session').textContent = isOpen
+                ? `Sessão #${c.id} • Aberto em ${new Date(c.at).toLocaleString('pt-BR')}`
+                : 'Nenhum caixa aberto. Abra o caixa para iniciar uma sessão.';
+            $('caixa-status-badge').textContent = isOpen ? 'ABERTO' : 'FECHADO';
+            $('caixa-status-badge').className = `px-2.5 py-0.5 rounded-full text-xs font-semibold border ${isOpen ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`;
+            $('btn-caixa-sangria').classList.toggle('hidden', !isOpen);
+            $('btn-caixa-suprimento').classList.toggle('hidden', !isOpen);
+            $('caixa-main-action-label').textContent = isOpen ? 'FECHAR CAIXA' : 'ABRIR CAIXA';
+            $('caixa-main-action-icon').setAttribute('data-lucide', isOpen ? 'lock' : 'unlock');
+            $('caixa-count').textContent = isOpen ? `Total: ${m.length} lançamentos` : '0 lançamentos';
+            const badge = { Venda: 'emerald', Suprimento: 'sky', Sangria: 'red' };
+            $('caixa-ledger-body').innerHTML = m.slice().reverse().map(x => `<tr class="hover:bg-dark-hover"><td class="p-3 font-mono text-gray-400">${new Date(x.t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td><td class="p-3 font-medium text-white">${esc(x.desc)}</td><td class="p-3 text-gray-400">${x.pay}</td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${badge[x.type]}-500/10 text-${badge[x.type]}-400">${x.type}</span></td><td class="p-3 text-right font-bold ${x.type === 'Sangria' ? 'text-red-400' : 'text-emerald-400'}">${x.type === 'Sangria' ? '- ' : ''}${money(x.v)}</td></tr>`).join('') || '<tr><td colspan="5" class="p-6 text-center text-gray-500">Nenhum lançamento</td></tr>';
+            if (!isOpen) {
+                $('caixa-side').innerHTML = '<div class="bg-dark-card rounded-xl border border-dark-border p-4 text-xs text-gray-400">Os dados da sessão encerrada estão disponíveis no histórico.</div>';
+                lucide.createIcons();
+                return;
+            }
+            const row = (a, b, cl = 'text-white') => `<div class="flex justify-between text-gray-400"><span>${a}</span><span class="font-medium ${cl}">${b}</span></div>`;
+            $('caixa-side').innerHTML = `<div class="bg-dark-card rounded-xl border border-dark-border p-4 space-y-4"><div class="flex justify-between items-center border-b border-dark-border pb-2"><h3 class="font-bold text-sm text-gold-500 tracking-wide">RESUMO DO CAIXA</h3><button onclick="printCaixa()" class="text-xs text-gray-400 hover:text-white">Imprimir</button></div><div class="space-y-1.5 text-xs">${row('Saldo Inicial:', money(c.initial))}${row('Suprimentos (+):', money(sup), 'text-emerald-400')}${row('Sangrias (-):', '- ' + money(sang), 'text-red-400')}${row('Vendas em Dinheiro:', money(din))}<div class="pt-2 border-t border-dark-border flex justify-between font-bold text-sm text-gold-400"><span>VALOR EM CAIXA:</span><span>${money(caixaResumo(c).drawerCash)}</span></div></div><div class="pt-3 border-t border-dark-border space-y-1 text-xs"><h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">RESUMO DAS VENDAS</h4>${PAYS.map(p => row(p + ':', money(by(p)), 'text-gray-300')).join('')}<div class="flex justify-between font-bold text-white pt-1 border-t border-dark-border"><span>TOTAL VENDAS:</span><span class="text-gold-500">${money(tot)}</span></div></div></div>`;
+            lucide.createIcons();
+        }
+        function renderCaixaHistory() {
+            const select = $('caixa-history-date');
+            if (!select) return;
+            $('clear-cash-history').classList.toggle('hidden', !isAdmin());
+            const dates = [...new Set(S.caixaHistory.map(c => caixaClosedAt(c)).filter(Boolean).map(caixaDateKey))].sort().reverse();
+            const selectedDate = dates.includes(select.value) ? select.value : dates[0] || '';
+            select.innerHTML = dates.map(date => `<option value="${date}">${caixaDateLabel(date)}</option>`).join('');
+            select.value = selectedDate;
+            const sessions = S.caixaHistory
+                .filter(c => caixaClosedAt(c) && caixaDateKey(caixaClosedAt(c)) === selectedDate)
+                .sort((a, b) => new Date(caixaClosedAt(b)) - new Date(caixaClosedAt(a)));
+            $('caixa-history-list').innerHTML = sessions.map(c => {
+                const summary = c.summary || caixaResumo(c);
+                return `<div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${String(selectedCashHistoryId) === String(c.id) ? 'bg-gold-500/5' : ''}">
+                    <div><div class="text-xs font-bold text-white">Sessão ${esc(c.id)} <span class="font-normal text-gray-400">• ${caixaDateTime(caixaClosedAt(c))}</span></div><div class="text-[10px] text-gray-400 mt-1">Vendas ${money(summary.sales)} • Ficou no caixa ${money(c.remainingCash ?? summary.drawerCash)}</div></div>
+                    <button onclick="verCaixaHistorico('${esc(String(c.id))}')" class="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-xs text-gray-200 hover:border-gold-500">Ver conferência</button>
+                </div>`;
+            }).join('') || '<p class="p-6 text-center text-xs text-gray-500">Nenhum caixa encerrado nesta data.</p>';
+            const selected = sessions.find(c => String(c.id) === String(selectedCashHistoryId)) || sessions[0];
+            selectedCashHistoryId = selected ? String(selected.id) : null;
+            const detail = $('caixa-history-detail');
+            detail.classList.toggle('hidden', !selected);
+            detail.innerHTML = selected ? caixaRelatorioHtml(selected) : '';
+        }
+        function limparHistoricoCaixa() {
+            if (!isAdmin()) return toast('Somente o administrador pode limpar o histórico do caixa.');
+            if (!S.caixaHistory.length) return toast('Não há registros no histórico para limpar.');
+            if (!confirm(`Isso apagará permanentemente ${S.caixaHistory.length} sessão(ões) encerrada(s) do histórico. O caixa atualmente aberto não será alterado. Deseja continuar?`)) return;
+            S.caixaHistory = [];
+            selectedCashHistoryId = null;
+            renderAll();
+            toast('Histórico de caixas apagado.');
+        }
+        function verCaixaHistorico(id) {
+            selectedCashHistoryId = id;
+            renderCaixaHistory();
+        }
+        function voltarCaixaAtual() {
+            selectedCashHistoryId = null;
+            renderCaixaHistory();
+        }
+        function caixaMov(type) {
+            if (!caixaAberto()) return toast('O caixa está fechado. Abra o caixa para registrar movimentações.');
+            const v = parseFloat((prompt(`Valor da ${type} (R$):`) || '').replace(',', '.'));
+            if (!(v > 0)) return;
+            if (type === 'Sangria' && v > caixaResumo(S.caixa).drawerCash) return toast('A sangria não pode ser maior que o dinheiro disponível no caixa.');
+            S.caixa.movs.push({ t: Date.now(), type, desc: (prompt('Motivo / descrição:') || type).trim(), pay: 'Dinheiro', v }); renderAll();
+        }
+        function printCaixa(c = S.caixa) {
+            const summary = c.summary || caixaResumo(c);
+            const r = (a, b, cls = '') => `<div class="tk-row ${cls}"><span>${a}</span><span>${b}</span></div>`;
+            const category = (title, data, includeFee) => `<div class="tk-hr"></div><div class="tk-b">${title}</div>${PAYS.map(pay => r(esc(pay), money(data.byPayment[pay] || 0))).join('')}${r('Valor dos produtos', money(data.products))}${includeFee ? r('Taxa de entrega', money(data.deliveryFee)) : ''}${data.serviceFee ? r('Serviço', money(data.serviceFee)) : ''}${r('Total', money(data.total), 'tk-b')}`;
+            const attendants = Object.entries(summary.attendants).sort((a, b) => b[1] - a[1]).map(([name, value]) => r(esc(name), money(value))).join('');
+            $('print-area').innerHTML = `${tkBrand}<div class="tk-c tk-b">RESUMO DO CAIXA</div><div class="tk-c tk-sm">Sessão #${esc(c.id)}</div><div class="tk-c tk-sm">Aberto em ${caixaDateTime(c.at)}</div>${c.closedAt ? `<div class="tk-c tk-sm">Fechado em ${caixaDateTime(c.closedAt)}</div>` : ''}<div class="tk-hr"></div>${r('Saldo inicial', money(c.initial))}${r('Suprimentos', money(summary.supplies))}${r('Sangrias', '- ' + money(summary.withdrawals))}${r('Vendas em dinheiro', money(summary.byPayment.Dinheiro || 0))}${r('Valor em caixa', money(summary.drawerCash), 'tk-b')}${r('Retirado no fechamento', money(c.withdrawal || 0))}${r('Ficou no caixa', money(c.remainingCash ?? summary.drawerCash), 'tk-b')}<div class="tk-hr"></div><div class="tk-b">RESUMO DAS VENDAS</div>${PAYS.map(pay => r(esc(pay), money(summary.byPayment[pay] || 0))).join('')}${r('TOTAL', money(summary.sales), 'tk-tot')}${category('VENDAS DELIVERY', summary.delivery, true)}${category('VENDAS MESAS', summary.tables, false)}${category('VENDAS BALCAO', summary.counter, false)}${attendants ? `<div class="tk-hr"></div><div class="tk-b">VENDAS POR ATENDENTE</div>${attendants}` : ''}${tkEnd}`;
+            window.print();
+        }
+        function printCaixaHistorico(id) {
+            const c = S.caixaHistory.find(session => String(session.id) === String(id));
+            if (c) printCaixa(c);
+        }
+        function fecharCaixa() {
+            if (!caixaAberto()) return toast('Este caixa já está fechado.');
+            const abertos = S.orders.filter(o => !o.paid && o.status !== 'CANCELADO').length;
+            if (abertos && !confirm(`Atenção: ${abertos} pedido(s) ainda não recebido(s).\n\nDeseja continuar com o fechamento do caixa?`)) return;
+            $('close-cash-expected').textContent = `Valor em caixa esperado: ${money(caixaResumo(S.caixa).drawerCash)}`;
+            $('close-cash-withdrawal').value = '0';
+            $('close-cash-next-initial').value = String(S.caixa.nextInitial ?? 15);
+            updateCloseCashPreview();
+            $('close-cash-modal').classList.remove('hidden');
+            $('close-cash-modal').classList.add('flex');
+        }
+        function updateCloseCashPreview() {
+            const drawer = caixaResumo(S.caixa).drawerCash;
+            const withdrawal = Number($('close-cash-withdrawal').value);
+            $('close-cash-remaining').textContent = money(drawer - (Number.isFinite(withdrawal) ? withdrawal : 0));
+        }
+        function closeCashModal() {
+            $('close-cash-modal').classList.add('hidden');
+            $('close-cash-modal').classList.remove('flex');
+        }
+        function caixaMainAction() {
+            if (caixaAberto()) return fecharCaixa();
+            abrirCaixa();
+        }
+        async function abrirCaixa() {
+            if (cashStatusSyncPending) return toast('Aguarde a sincronização do status do caixa.');
+            if (caixaAberto()) return toast('O caixa já está aberto.');
+            if (!confirm('Abrir um novo caixa e começar uma nova sessão?')) return;
+            const previousState = JSON.stringify(S);
+            const previousHistorySelection = selectedCashHistoryId;
+            const initial = Number(S.caixa.nextInitial ?? S.caixa.remainingCash ?? 15);
+            S.caixa = newCaixa();
+            S.caixa.initial = Number.isFinite(initial) && initial >= 0 ? initial : 15;
+            S.caixa.status = 'ABERTO';
+            selectedCashHistoryId = null;
+            cashStatusSyncPending = true;
+            try {
+                await persistCashStatusForOnlineOrders();
+            } catch (error) {
+                console.error('Não foi possível sincronizar a abertura do caixa:', error);
+                S = JSON.parse(previousState);
+                selectedCashHistoryId = previousHistorySelection;
+                try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (storageError) {
+                    console.error('Não foi possível restaurar o estado local do caixa:', storageError);
+                }
+                renderAll();
+                syncRealtimeOnlineOrders();
+                return toast(`O caixa não foi aberto porque o Supabase não confirmou a operação: ${error.message}`);
+            } finally {
+                cashStatusSyncPending = false;
+            }
+            renderAll();
+            syncRealtimeOnlineOrders();
+            toast(`Caixa aberto com saldo inicial de ${money(S.caixa.initial)}.`);
+        }
+        async function confirmCloseCash() {
+            if (cashStatusSyncPending) return toast('Aguarde a sincronização do status do caixa.');
+            if (!caixaAberto()) return toast('Este caixa já está fechado.');
+            const withdrawal = Number($('close-cash-withdrawal').value);
+            const nextInitial = Number($('close-cash-next-initial').value);
+            const summary = caixaResumo(S.caixa);
+            if (!Number.isFinite(withdrawal) || withdrawal < 0 || withdrawal > Math.max(0, summary.drawerCash)) return toast('Informe uma retirada válida, dentro do valor em caixa.');
+            if (!Number.isFinite(nextInitial) || nextInitial < 0) return toast('Informe um saldo inicial válido para o próximo caixa.');
+
+            const previousState = JSON.stringify(S);
+            const previousHistorySelection = selectedCashHistoryId;
+            const closedAt = new Date().toISOString();
+            const closed = JSON.parse(JSON.stringify(S.caixa));
+            closed.closedAt = closedAt;
+            closed.status = 'FECHADO';
+            closed.closedBy = currentUser.name;
+            closed.withdrawal = +withdrawal.toFixed(2);
+            closed.remainingCash = +(summary.drawerCash - withdrawal).toFixed(2);
+            closed.nextInitial = +nextInitial.toFixed(2);
+            closed.summary = summary;
+            S.caixaHistory.push(closed);
+            selectedCashHistoryId = String(closed.id);
+            $('caixa-history-date').value = caixaDateKey(closedAt);
+            S.caixa = {
+                ...newCaixa(),
+                status: 'FECHADO',
+                initial: +nextInitial.toFixed(2),
+                nextInitial: +nextInitial.toFixed(2)
+            };
+            cashStatusSyncPending = true;
+            try {
+                await persistCashStatusForOnlineOrders();
+            } catch (error) {
+                console.error('Não foi possível sincronizar o fechamento do caixa:', error);
+                S = JSON.parse(previousState);
+                selectedCashHistoryId = previousHistorySelection;
+                try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (storageError) {
+                    console.error('Não foi possível restaurar o estado local do caixa:', storageError);
+                }
+                renderAll();
+                syncRealtimeOnlineOrders();
+                return toast(`O caixa não foi fechado porque o Supabase não confirmou a operação: ${error.message}`);
+            } finally {
+                cashStatusSyncPending = false;
+            }
+            closeCashModal();
+            renderAll();
+            syncRealtimeOnlineOrders();
+            printCaixa(closed);
+            toast(`Caixa ${closed.id} fechado. Abra outro quando quiser iniciar uma nova sessão.`);
+        }
+
+        // ---------- Impressão térmica (Elgin i9 - 80mm) ----------
+        const tkBrand = '<div class="tk-c tk-brand">GABRYELLE PRIME</div><div class="tk-c tk-sm">MUSIC &amp; GASTRONOMIA</div><div class="tk-hr2"></div>';
+        const tkEnd = '<div class="tk-hr"></div><div style="height:10mm"></div>';
+        function printThermal(type, id) {
+            const o = S.orders.find(x => x.id === id); if (!o) return;
+            const d = new Date(o.at), dt = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const top = (t) => `${tkBrand}<div class="tk-c tk-b">${t}</div><div class="tk-c tk-sm">PEDIDO</div><div class="tk-c tk-num">#${o.id}</div><div class="tk-inv">${esc(where(o).toUpperCase())}</div><div class="tk-row tk-sm"><span>${dt}</span><span>${esc(o.by || '')}</span></div><div class="tk-hr"></div>`;
+            const det = x => x.det.map(t => `<div class="tk-det">${t.startsWith('+') ? '' : '› '}${esc(t)}</div>`).join('') + (x.obs ? `<div class="tk-obs">OBS: ${esc(x.obs)}</div>` : '');
+            let h;
+            if (type === 'kitchen') {
+                h = top('*** COZINHA ***') + o.items.map(x => `<div class="tk-item">${x.qty}x ${esc(x.name.toUpperCase())}</div>${det(x)}`).join('<div class="tk-hr"></div>')
+                  + `<div class="tk-hr2"></div><div class="tk-c tk-sm">Total de itens: ${o.items.reduce((a, x) => a + x.qty, 0)}</div>`;
+            } else {
+                const cli = o.type === 'DELIVERY' ? `<div class="tk-b">CLIENTE</div><div>${esc(o.cli)}</div><div>${esc(o.tel)}</div><div>${esc(o.end)}</div><div class="tk-b">Bairro: ${esc(o.bairro)}</div><div class="tk-hr"></div>` : '';
+                const pay = o.paid ? `PAGO • ${esc(o.pay)}` : (o.payPref ? `Pagar na entrega • ${esc(o.payPref)}` : 'A RECEBER');
+                h = top('CAIXA / ENTREGA') + cli
+                  + o.items.map(x => `<div class="tk-row tk-b"><span>${x.qty}x ${esc(x.name)}</span><span>${money(x.qty * x.price)}</span></div>${det(x)}`).join('<div style="height:4px"></div>')
+                  + '<div class="tk-hr"></div>'
+                  + ((o.taxa || o.svc) ? `<div class="tk-row"><span>Subtotal</span><span>${money(o.sub)}</span></div>` : '') + (o.taxa ? `<div class="tk-row"><span>Taxa de entrega</span><span>${money(o.taxa)}</span></div>` : '') + (o.svc ? `<div class="tk-row"><span>Taxa de serviço (${o.svcPct || 10}%)</span><span>${money(o.svc)}</span></div>` : '')
+                  + `<div class="tk-hr2"></div><div class="tk-row tk-tot"><span>TOTAL</span><span>${money(o.total)}</span></div><div class="tk-hr2"></div><div class="tk-c tk-b">${pay}</div><div class="tk-hr"></div><div class="tk-c tk-sm">Obrigado pela preferência!</div>`;
+            }
+            $('print-area').innerHTML = h + tkEnd; window.print();
+        }
+
+        // ---------- Clientes do delivery ----------
+        const digits = s => String(s || '').replace(/\D/g, ''), norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        let cliLoaded = false;
+        function upsertCli(o) {
+            if (!o.cli && !o.tel) return;
+            const dg = digits(o.tel), nm = norm(o.cli);
+            let c = S.clientes.find(x => dg.length >= 8 ? digits(x.tel) === dg : (!digits(x.tel) && norm(x.cli) === nm));
+            if (!c) { c = { id: Date.now() + Math.floor(Math.random() * 1000), n: 0 }; S.clientes.push(c); }
+            Object.assign(c, { cli: o.cli, tel: o.tel, end: o.end, bairro: o.bairro, taxa: o.taxa || 0, last: Date.now() }); c.n++;
+        }
+        function buscaCli(v) {
+            const q = norm(v.trim()), dg = digits(v), box = $('o-busca-res');
+            if (q.length < 2 && dg.length < 3) { box.classList.add('hidden'); return; }
+            const r = S.clientes.filter(c => (dg.length >= 3 && digits(c.tel).includes(dg)) || (q.length >= 2 && norm(c.cli).includes(q))).sort((a, b) => b.last - a.last).slice(0, 6);
+            box.innerHTML = r.map(c => `<button onclick="selCli(${c.id})" class="w-full text-left p-2 hover:bg-dark-hover border-b border-dark-border text-xs"><div class="font-semibold text-white">${esc(c.cli)} <span class="text-gray-400 font-normal">${esc(c.tel)}</span></div><div class="text-gray-400">${esc(c.end)} • ${esc(c.bairro)}</div></button>`).join('') || '<div class="p-2 text-xs text-gray-500">Cliente não cadastrado. Preencha os dados abaixo; ele será salvo ao finalizar.</div>';
+            box.classList.remove('hidden');
+        }
+        function selCli(id) {
+            const c = S.clientes.find(x => x.id === id); if (!c) return;
+            $('o-cli').value = c.cli; $('o-tel').value = c.tel; $('o-end').value = c.end; $('o-bairro').value = c.bairro; $('o-taxa').value = c.taxa || '';
+            $('o-conf-txt').innerHTML = `${esc(c.cli)} • ${esc(c.tel)}<br>${esc(c.end)}<br>Bairro: ${esc(c.bairro)}`;
+            $('o-conf').checked = false; $('o-conf-box').classList.remove('hidden'); cliLoaded = true;
+            $('o-busca').value = ''; $('o-busca-res').classList.add('hidden'); renderCart();
+        }
+        function renderClientes() {
+            const q = norm(($('cli-q').value || '').trim()), dg = digits($('cli-q').value);
+            const r = S.clientes.filter(c => !q || norm(c.cli).includes(q) || (dg.length >= 3 && digits(c.tel).includes(dg))).sort((a, b) => b.last - a.last);
+            $('cli-body').innerHTML = r.map(c => `<tr class="hover:bg-dark-hover"><td class="p-3 font-semibold text-white">${esc(c.cli)}</td><td class="p-3">${esc(c.tel)}</td><td class="p-3 text-gray-400">${esc(c.end)}<div class="text-[10px]">Bairro: ${esc(c.bairro)}</div></td><td class="p-3">${c.n}<div class="text-[10px] text-gray-500">${new Date(c.last).toLocaleDateString('pt-BR')}</div></td><td class="p-3 text-right space-x-2 whitespace-nowrap"><button onclick="editCli(${c.id})" class="text-gold-400 hover:text-white">Editar</button><button onclick="delCli(${c.id})" class="text-red-400 hover:text-red-300">Excluir</button></td></tr>`).join('') || '<tr><td colspan="5" class="p-6 text-center text-gray-500">Nenhum cliente cadastrado ainda</td></tr>';
+        }
+        function editCli(id) {
+            const c = S.clientes.find(x => x.id === id); if (!c) return;
+            const n = prompt('Nome:', c.cli); if (n === null) return;
+            const t = prompt('Telefone:', c.tel); if (t === null) return;
+            const e = prompt('Endereço completo:', c.end); if (e === null) return;
+            const b = prompt('Bairro:', c.bairro); if (b === null) return;
+            Object.assign(c, { cli: n.trim(), tel: t.trim(), end: e.trim(), bairro: b.trim() }); save(); renderClientes();
+        }
+        function delCli(id) { if (confirm('Excluir este cliente do cadastro?')) { S.clientes = S.clientes.filter(x => x.id !== id); save(); renderClientes(); } }
+
+        // ---------- Importar WhatsApp ----------
+        function parseWhatsAppMoney(value) {
+            let normalized = String(value || '').replace(/[^\d.,-]/g, '');
+            const comma = normalized.lastIndexOf(','), dot = normalized.lastIndexOf('.');
+            if (comma >= 0 && dot >= 0) {
+                const decimal = comma > dot ? ',' : '.';
+                normalized = normalized.replace(decimal === ',' ? /\./g : /,/g, '').replace(decimal, '.');
+            } else {
+                normalized = normalized.replace(',', '.');
+            }
+            const amount = Number(normalized);
+            return Number.isFinite(amount) ? amount : 0;
+        }
+        function processWhatsAppOrder() {
+            const t = $('whatsapp-input').value.replace(/\r\n?/g, '\n').trim();
+            const g = r => { const m = t.match(r); return m ? m[1].replace(/\*/g, '').trim() : ''; };
+            const items = [];
+            const receiptItem = /(?:^|\n)\s*[•●▪]\s*(\d+)\s*x\s*\*?([^*\n(]+?)\*?(?:\s*\(([^)\n]+)\))?\s*[-–—]\s*R\$\s*([\d.,]+)/g;
+            let m;
+            while ((m = receiptItem.exec(t))) {
+                const qty = Number(m[1]), product = m[2].trim(), size = (m[3] || '').trim();
+                if (!qty || !product) continue;
+                const pizzaSize = SIZES.find(value => norm(value) === norm(size));
+                items.push({
+                    name: pizzaSize ? `Pizza ${pizzaSize}` : `${product}${size ? ` (${size})` : ''}`,
+                    qty,
+                    price: parseWhatsAppMoney(m[4]) / qty,
+                    det: pizzaSize ? [product] : [],
+                    obs: ''
+                });
+            }
+            if (!items.length) {
+                const legacyItem = /\*(\d+)\s*x\s*([^*\n]+)\*\s*\n((?:\s*-[^\n]*\n)*)\s*R\$\s*([\d.,]+)/g;
+                while ((m = legacyItem.exec(t))) {
+                    const qty = Number(m[1]);
+                    if (!qty) continue;
+                    items.push({
+                        name: m[2].trim(),
+                        qty,
+                        price: parseWhatsAppMoney(m[4]) / qty,
+                        det: m[3].split('\n').map(value => value.replace(/^\s*-\s*/, '').trim()).filter(Boolean),
+                        obs: ''
+                    });
+                }
+            }
+            if (!items.length) return toast('Não encontrei produtos. Copie a mensagem completa com itens, quantidades e preços.');
+            const address = g(/(?:\*?\s*Endereço(?: de entrega)?\s*:?\s*\*?)\s*([^\n]+)/i);
+            const reference = g(/(?:\*?\s*Ponto\s*(?:de\s*)?Ref(?:erência)?\.?\s*:?\s*\*?)\s*([^\n]+)/i);
+            const neighborhood = g(/(?:\*?\s*Bairro\s*:?\s*\*?)\s*([^\n]+)/i);
+            const addressParts = [address, reference ? `Referência: ${reference}` : ''].filter(Boolean);
+            const payment = g(/Forma\s+de\s+Pagamento\s*:?\s*\*?\s*([^\n]+)/i) || g(/Forma\s+de\s+pagamento\*?:?\s*([^\n]+)/i);
+            const num = Number(g(/Pedido\s*(?:N[º°o]\s*)?#?\s*(\d+)/i)) || 0;
+            const sub = parseWhatsAppMoney(g(/(?:^|\n)\s*\*?\s*Subtotal\s*:?\s*\*?\s*R\$\s*([\d.,]+)/i));
+            const total = parseWhatsAppMoney(g(/(?:^|\n)\s*\*?\s*TOTAL\b\s*:?\s*\*?\s*R\$\s*([\d.,]+)/i) || g(/Valor final:?\*?\s*R\$\s*([\d.,]+)/i));
+            const itemsTotal = items.reduce((sum, item) => sum + item.qty * item.price, 0);
+            const feeFromTotal = total > itemsTotal ? total - itemsTotal : 0;
+            const feeFromSubtotal = total > sub ? total - sub : 0;
+            const deliveryFee = feeFromTotal || feeFromSubtotal;
+            const o = { id: num && !S.orders.some(x => x.id === num) ? num : 0, type: 'DELIVERY', cli: g(/(?:👤|Cliente\s*:?)\s*\*?([^\n*]+)/i) || 'Cliente WhatsApp', tel: g(/📞\s*([^\n]+)/), end: addressParts.join(' · '), bairro: neighborhood || (address.includes(',') ? address.split(',').pop().trim() : ''), items, taxa: deliveryFee, by: currentUser.name,
+                payPref: /pix/i.test(payment) ? 'PIX' : /dinheiro/i.test(payment) ? 'Dinheiro' : /cr[eé]dito/i.test(payment) ? 'Cartão de Crédito' : /d[eé]bito/i.test(payment) ? 'Cartão de Débito' : '' };
+            finalize(o, 'Pagar depois'); $('whatsapp-input').value = '';
+            printThermal('kitchen', o.id); setTimeout(() => printThermal('caixa', o.id), 800);
+            switchTab('pedidos');
+        }
+
+        // ---------- Admin do cardápio ----------
+        function setP(k, a, b, v) {
+            if (!canManagePromotions()) return toast('Apenas administrador e gerente podem alterar preços.');
+            const M = S.menu, n = parseFloat(String(v).replace(',', '.')) || 0, names = Object.keys(M.cats);
+            if (k === 'svc') M.svc = n; else if (k === 'ac') M.ac[a][1] = n; else if (k === 'c') M.cats[names[a]][b][1] = n; else M[k][a] = k === 'mf' ? Math.max(1, Math.round(n)) : n;
+            save(); renderCardapioAdmin(); renderMenu();
+        }
+        function setPromotionDay(day, enabled) {
+            if (!canManagePromotions()) return toast('Apenas administrador e gerente podem alterar promoções.');
+            const days = new Set(S.menu.promotionDays);
+            if (enabled) days.add(day); else days.delete(day);
+            S.menu.promotionDays = [...days].sort((a, b) => a - b);
+            save();
+            renderCardapioAdmin();
+            renderMenu();
+        }
+        function setPromoPrice(key, value, regularPrice) {
+            if (!canManagePromotions()) return toast('Apenas administrador e gerente podem alterar promoções.');
+            if (value.trim() === '') {
+                delete S.menu.promoPrices[key];
+            } else {
+                const price = Number(value.replace(',', '.'));
+                if (!Number.isFinite(price) || price < 0 || price >= Number(regularPrice)) {
+                    toast('O preço promocional deve ser menor que o preço normal.');
+                    renderCardapioAdmin();
+                    return;
+                }
+                S.menu.promoPrices[key] = price;
+            }
+            save();
+            renderCardapioAdmin();
+            renderMenu();
+        }
+        function renderCardapioAdmin() {
+            if (!canManagePromotions()) return;
+            const M = S.menu, names = Object.keys(M.cats);
+            const inp = (v, h, w = 'w-24') => `<input type="number" step="0.01" min="0" value="${v || ''}" placeholder="0,00" onchange="${h}" class="${w} bg-dark-bg border border-dark-border rounded p-1.5 text-xs text-right text-gray-200 focus:outline-none focus:border-gold-500">`;
+            const promoInp = (key, regularPrice) => `<input type="number" step="0.01" min="0" max="${Math.max(0, Number(regularPrice) - 0.01)}" value="${M.promoPrices[key] ?? ''}" placeholder="Promo" onchange="setPromoPrice('${key}',this.value,'${Number(regularPrice) || 0}')" class="w-24 bg-dark-bg border border-emerald-500/30 rounded p-1.5 text-xs text-right text-emerald-300 focus:outline-none focus:border-emerald-500" aria-label="Preço promocional">`;
+            const card = (t, b) => `<div class="bg-dark-card rounded-xl border border-dark-border p-4"><h3 class="font-bold text-sm text-gold-500 mb-3">${t}</h3>${b}</div>`;
+            const head = SIZES.map(z => `<div class="text-[10px] text-gray-400 uppercase text-center">${z}</div>`).join('');
+            const grid = (lbl, arr, k) => `<div class="grid grid-cols-5 gap-2 items-center mb-2"><span class="text-xs text-gray-300">${lbl}</span>${arr.map((v, i) => inp(v, `setP('${k}',${i},null,this.value)`, 'w-full')).join('')}</div>`;
+            const promoGrid = (lbl, arr, key) => `<div class="grid grid-cols-5 gap-2 items-center mb-2"><span class="text-xs text-emerald-300">${lbl}</span>${arr.map((v, i) => promoInp(`pizza:${key}:${i}`, v)).join('')}</div>`;
+            const dayOptions = PROMOTION_DAYS.map(day => `<label class="flex items-center gap-2 rounded-lg border border-dark-border bg-dark-bg px-3 py-2 text-xs text-gray-200"><input type="checkbox" ${M.promotionDays.includes(day.value) ? 'checked' : ''} onchange="setPromotionDay(${day.value},this.checked)"><span>${day.label}</span></label>`).join('');
+            let h = card('Dias e preços promocionais', `<p class="text-xs text-gray-400 mb-3">Selecione os dias e informe os preços promocionais. Campo vazio mantém o preço normal. Por padrão, quarta e quinta estão selecionadas.</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${dayOptions}</div>`);
+            h += card('Pizzas — preço por tamanho (vale para todos os sabores)', `<div class="grid grid-cols-5 gap-2 mb-1"><span></span>${head}</div>${grid('Salgadas', M.pt, 'pt')}${promoGrid('Promo salgadas', M.pt, 'pt')}${grid('Doces', M.pd, 'pd')}${promoGrid('Promo doces', M.pd, 'pd')}${grid('Máx. sabores', M.mf, 'mf')}`);
+            h += card('Taxa de serviço das mesas', `<div class="flex justify-between items-center text-xs text-gray-300"><span>Percentual sobre o total da comanda (%)</span>${inp(M.svc, "setP('svc',0,null,this.value)")}</div>`);
+            h += card('Acréscimos (borda e adicionais)', `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${M.ac.map((a, i) => `<div class="flex justify-between items-center text-xs text-gray-300"><span>${a[0]}</span>${inp(a[1], `setP('ac',${i},null,this.value)`)}</div>`).join('')}</div>`);
+            names.forEach((c, ci) => h += card(c, `<div class="grid grid-cols-1 xl:grid-cols-2 gap-2">${M.cats[c].map((it, ii) => `<div class="flex flex-wrap justify-between items-center gap-2 text-xs text-gray-300 border-b border-dark-border pb-2"><span class="min-w-32">${esc(it[0])}</span><div class="flex items-center gap-2"><label class="flex items-center gap-1 text-[10px] text-gray-500">Normal ${inp(it[1], `setP('c',${ci},${ii},this.value)`)}</label><label class="flex items-center gap-1 text-[10px] text-emerald-300">Promo ${promoInp(`item:${ci}:${ii}`, it[1])}</label></div></div>`).join('')}</div>`));
+            $('cardapio-admin').innerHTML = h;
+            const miss = [...M.pt, ...M.pd].filter(v => !v).length + M.ac.filter(a => !a[1]).length + names.reduce((a, c) => a + M.cats[c].filter(i => !i[1]).length, 0);
+            $('cardapio-alert').textContent = miss ? `⚠ ${miss} preço(s) ainda não preenchidos.` : '';
+        }
+
+    </script>
+</body>
+</html>
