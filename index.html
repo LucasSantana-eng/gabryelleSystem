@@ -378,9 +378,20 @@
                             <div class="relative"><input id="o-busca" oninput="buscaCli(this.value)" placeholder="🔍 Buscar cliente cadastrado (telefone ou nome)" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"><div id="o-busca-res" class="hidden absolute z-20 left-0 right-0 mt-1 bg-dark-card border border-dark-border rounded-lg shadow-xl max-h-56 overflow-y-auto"></div></div>
                             <div id="o-conf-box" class="hidden bg-amber-500/10 border border-amber-500/40 rounded-lg p-2 text-xs text-amber-300 space-y-1"><div>Cliente já cadastrado. Confirme o endereço com ele:</div><div id="o-conf-txt" class="font-semibold text-white"></div><label class="flex items-center gap-2"><input id="o-conf" type="checkbox"> Endereço confirmado com o cliente</label></div>
                             <input id="o-cli" placeholder="Nome do cliente" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
-                            <input id="o-tel" placeholder="Telefone" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                            <input id="o-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="14" placeholder="(77)99999-9999" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
                             <input id="o-end" placeholder="Endereço completo + referência" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
-                            <div class="grid grid-cols-2 gap-2"><input id="o-bairro" placeholder="Bairro" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"><input id="o-taxa" type="number" step="0.01" min="0" placeholder="Taxa entrega" oninput="renderCart()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="o-bairro" placeholder="Bairro" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                                <select id="o-taxa" onchange="renderCart()" aria-label="Taxa de entrega" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                                    <option value="7">Taxa entrega: R$ 7,00</option>
+                                    <option value="8">Taxa entrega: R$ 8,00</option>
+                                    <option value="9">Taxa entrega: R$ 9,00</option>
+                                    <option value="10">Taxa entrega: R$ 10,00</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="o-counter-box" class="hidden">
+                            <input id="o-counter-cli" autocomplete="name" placeholder="Nome do cliente que vai retirar / balcão" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
                         </div>
                         <div id="cart-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
                         <div id="cart-svc-row" class="hidden border-t border-dark-border pt-2"><div class="flex justify-between items-center text-xs text-gray-300"><label class="flex items-center gap-2"><input id="o-svc" type="checkbox" checked onchange="renderCart()"> Taxa de serviço (<span id="svc-pct"></span>%)</label><span id="cart-svc"></span></div></div>
@@ -650,22 +661,8 @@
 
             <select id="login-user-select" class="w-full bg-dark-bg border border-dark-border text-sm rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-gold-500"></select>
 
-            <input type="password" id="pin-input" readonly maxlength="4" class="w-full bg-dark-bg border border-dark-border rounded-lg text-center font-mono text-2xl tracking-widest text-gold-500 py-2 focus:outline-none">
-
-            <div class="grid grid-cols-3 gap-2">
-                <button onclick="appendPin('1')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">1</button>
-                <button onclick="appendPin('2')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">2</button>
-                <button onclick="appendPin('3')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">3</button>
-                <button onclick="appendPin('4')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">4</button>
-                <button onclick="appendPin('5')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">5</button>
-                <button onclick="appendPin('6')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">6</button>
-                <button onclick="appendPin('7')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">7</button>
-                <button onclick="appendPin('8')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">8</button>
-                <button onclick="appendPin('9')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">9</button>
-                <button onclick="clearPin()" class="bg-red-500/10 text-red-400 hover:bg-red-500/20 py-3 rounded-lg font-bold text-xs">LIMPAR</button>
-                <button onclick="appendPin('0')" class="bg-dark-bg hover:bg-dark-hover py-3 rounded-lg font-bold text-lg text-white">0</button>
-                <button onclick="submitLogin()" class="bg-gold-500 text-black hover:bg-gold-600 py-3 rounded-lg font-bold text-xs">ENTRAR</button>
-            </div>
+            <input type="password" id="pin-input" inputmode="numeric" pattern="[0-9]{4}" autocomplete="current-password" maxlength="4" aria-label="PIN de acesso, quatro dígitos" class="w-full bg-dark-bg border border-dark-border rounded-lg text-center font-mono text-2xl tracking-widest text-gold-500 py-2 focus:outline-none focus:border-gold-500">
+            <button type="button" onclick="submitLogin()" class="w-full bg-gold-500 text-black hover:bg-gold-600 py-3 rounded-lg font-bold text-xs">ENTRAR</button>
         </div>
     </div>
 
@@ -771,7 +768,6 @@
         ];
 
         let currentUser = null;
-        let currentPinInput = '';
         const ORDER_BRIDGE_URL = `${SUPABASE_URL}/functions/v1/order-bridge`;
         let onlineOrdersLoading = false;
         let onlineOrdersTimer = null;
@@ -813,6 +809,13 @@ R$ 130,00
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
+            initPhoneInputs();
+            $('pin-input').addEventListener('input', event => {
+                event.target.value = event.target.value.replace(/\D/g, '').slice(0, 4);
+            });
+            $('pin-input').addEventListener('keydown', event => {
+                if (event.key === 'Enter') submitLogin();
+            });
             if (supabaseClient) {
                 setSupabaseStatus('Supabase conectando...');
             } else {
@@ -1282,7 +1285,7 @@ R$ 130,00
                     type: payload.deliveryType === 'delivery' ? 'DELIVERY' : 'BALCAO',
                     mesa: null,
                     cli: String(customer.name || 'Cliente online'),
-                    tel: String(customer.phone || ''),
+                    tel: formatBrazilPhone(customer.phone),
                     end: String(payload.address || ''),
                     bairro: 'Pedido online',
                     items,
@@ -1349,9 +1352,9 @@ R$ 130,00
         }
 
         function openLoginModal() {
-            currentPinInput = '';
             document.getElementById('pin-input').value = '';
             document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('pin-input').focus();
         }
 
         function populateUserSelect() {
@@ -1360,23 +1363,16 @@ R$ 130,00
             select.innerHTML = availableUsers.filter(u => u.active).map(u => `<option value="${u.id}">${esc(u.name)} (${esc(u.role)})</option>`).join('');
         }
 
-        function appendPin(num) {
-            if (currentPinInput.length < 4) {
-                currentPinInput += num;
-                document.getElementById('pin-input').value = '*'.repeat(currentPinInput.length);
-            }
-        }
-
         function clearPin() {
-            currentPinInput = '';
             document.getElementById('pin-input').value = '';
+            document.getElementById('pin-input').focus();
         }
 
         function submitLogin() {
             const selectedId = parseInt(document.getElementById('login-user-select').value);
             const user = users.find(u => u.id === selectedId);
 
-            if (user && user.pin === currentPinInput) {
+            if (user && String(user.pin) === document.getElementById('pin-input').value) {
                 currentUser = user;
                 updateRolePermissions();
                 renderUsersTable();
@@ -1689,6 +1685,43 @@ R$ 130,00
         const caixaAberto = () => S.caixa.status !== 'FECHADO';
         const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+        function formatBrazilPhone(value) {
+            let phoneDigits = String(value || '').replace(/\D/g, '');
+            if ((phoneDigits.length === 12 || phoneDigits.length === 13) && phoneDigits.startsWith('55')) {
+                phoneDigits = phoneDigits.slice(2);
+            }
+            phoneDigits = phoneDigits.slice(0, 11);
+            if (!phoneDigits) return '';
+            const areaCode = phoneDigits.slice(0, 2);
+            const subscriber = phoneDigits.slice(2);
+            const prefix = areaCode.length === 2 ? `(${areaCode})` : `(${areaCode}`;
+            if (!subscriber) return prefix;
+            if (phoneDigits.length === 11) return `${prefix}${subscriber.slice(0, 5)}-${subscriber.slice(5)}`;
+            if (phoneDigits.length === 10) return `${prefix}${subscriber.slice(0, 4)}-${subscriber.slice(4)}`;
+            return subscriber.length > 4
+                ? `${prefix}${subscriber.slice(0, 4)}-${subscriber.slice(4)}`
+                : `${prefix}${subscriber}`;
+        }
+
+        function formatPhoneInput(input) {
+            const digitsBeforeCursor = input.value.slice(0, input.selectionStart || 0).replace(/\D/g, '').length;
+            input.value = formatBrazilPhone(input.value);
+            let cursor = 0, digitCount = 0;
+            while (cursor < input.value.length && digitCount < digitsBeforeCursor) {
+                if (/\d/.test(input.value[cursor])) digitCount++;
+                cursor++;
+            }
+            input.setSelectionRange(cursor, cursor);
+        }
+
+        function initPhoneInputs() {
+            document.querySelectorAll('input[type="tel"]').forEach(input => {
+                input.addEventListener('input', () => formatPhoneInput(input));
+                input.addEventListener('blur', () => { input.value = formatBrazilPhone(input.value); });
+                input.value = formatBrazilPhone(input.value);
+            });
+        }
+
         function toast(m) {
             const d = document.createElement('div'); d.textContent = m;
             d.className = 'no-print fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] bg-gold-500 text-black text-xs font-bold px-4 py-2 rounded-lg shadow-xl';
@@ -1698,6 +1731,9 @@ R$ 130,00
 
         function normalizeCaixaState() {
             S.orders = Array.isArray(S.orders) ? S.orders : [];
+            S.orders.forEach(order => { if (order.tel) order.tel = formatBrazilPhone(order.tel); });
+            S.clientes = Array.isArray(S.clientes) ? S.clientes : [];
+            S.clientes.forEach(customer => { if (customer.tel) customer.tel = formatBrazilPhone(customer.tel); });
             S.caixaHistory = Array.isArray(S.caixaHistory) ? S.caixaHistory : [];
             S.caixa = S.caixa || newCaixa();
             S.caixa.movs = Array.isArray(S.caixa.movs) ? S.caixa.movs : [];
@@ -2193,6 +2229,7 @@ R$ 130,00
             const t = $('o-type').value;
             $('o-mesa').classList.toggle('hidden', t !== 'MESA');
             $('o-del-box').classList.toggle('hidden', t !== 'DELIVERY');
+            $('o-counter-box').classList.toggle('hidden', !['BALCAO', 'RETIRADA'].includes(t));
             $('o-pay').value = t === 'MESA' ? 'Pagar depois' : 'PIX';
             renderCart();
         }
@@ -2333,11 +2370,13 @@ R$ 130,00
             const type = $('o-type').value;
             const payment = $('o-pay').value;
             if (payment !== 'Pagar depois' && !caixaAberto()) return toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
-            const o = { type: type === 'RETIRADA' ? 'BALCAO' : type, serviceType: type === 'RETIRADA' ? 'RETIRADA' : '', printRequested: $('o-print').checked, mesa: type === 'MESA' ? +$('o-mesa').value : null, cli: $('o-cli').value.trim(), tel: $('o-tel').value.trim(), end: $('o-end').value.trim(), bairro: $('o-bairro').value.trim(), items: cart.map(x => ({ ...x })), taxa: cartTaxa(), svc: cartSvc(), svcPct: S.menu.svc, by: currentUser.name, byId: currentUser.id };
+            const customerName = type === 'DELIVERY' ? $('o-cli').value.trim() :
+                ['BALCAO', 'RETIRADA'].includes(type) ? $('o-counter-cli').value.trim() : '';
+            const o = { type: type === 'RETIRADA' ? 'BALCAO' : type, serviceType: type === 'RETIRADA' ? 'RETIRADA' : '', printRequested: $('o-print').checked, mesa: type === 'MESA' ? +$('o-mesa').value : null, cli: customerName, tel: type === 'DELIVERY' ? formatBrazilPhone($('o-tel').value) : '', end: $('o-end').value.trim(), bairro: $('o-bairro').value.trim(), items: cart.map(x => ({ ...x })), taxa: cartTaxa(), svc: cartSvc(), svcPct: S.menu.svc, by: currentUser.name, byId: currentUser.id };
             if (type === 'DELIVERY' && (!o.cli || !o.end)) return toast('Delivery: informe nome e endereço');
             if (type === 'DELIVERY' && cliLoaded && !$('o-conf').checked) return toast('Confirme o endereço com o cliente');
             if (!finalize(o, payment)) return;
-            cart = []; ['o-cli', 'o-tel', 'o-end', 'o-bairro', 'o-taxa', 'o-busca'].forEach(id => $(id).value = ''); cliLoaded = false; $('o-conf').checked = false; $('o-conf-box').classList.add('hidden'); $('o-busca-res').classList.add('hidden'); renderCart();
+            cart = []; ['o-cli', 'o-counter-cli', 'o-tel', 'o-end', 'o-bairro', 'o-busca'].forEach(id => $(id).value = ''); $('o-taxa').value = '7'; cliLoaded = false; $('o-conf').checked = false; $('o-conf-box').classList.add('hidden'); $('o-busca-res').classList.add('hidden'); renderCart();
             toast(`Pedido #${o.id} enviado para a cozinha`);
             if (type === 'MESA') {
                 selectedMesa = o.mesa;
@@ -2394,6 +2433,7 @@ R$ 130,00
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-gray-400">
                             <div>Pedido criado: <span class="text-gray-200">${o.at ? new Date(o.at).toLocaleString('pt-BR') : '—'}</span></div>
                             <div>Atendente: <span class="text-gray-200">${esc(o.by || '—')}</span></div>
+                            ${o.cli ? `<div>Cliente: <span class="text-gray-200">${esc(o.cli)}</span></div>` : ''}
                             ${o.type === 'DELIVERY' ? `<div>Telefone: <span class="text-gray-200">${esc(o.tel || '—')}</span></div><div>Endereço: <span class="text-gray-200">${esc(o.end || '—')}</span></div><div>Bairro: <span class="text-gray-200">${esc(o.bairro || '—')}</span></div>` : ''}
                         </div>
                         <div class="border-t border-dark-border pt-2">${items}</div>
@@ -2406,7 +2446,7 @@ R$ 130,00
                         </div>
                     </div>
                 </td></tr>`;
-                return `<tr class="hover:bg-dark-hover"><td class="p-3 font-bold text-gold-500">#${o.id}</td><td class="p-3 font-medium text-white">${esc(o.type === 'DELIVERY' ? o.cli : where(o))}<div class="text-[10px] text-gray-500">${esc(o.by || '')}</div></td><td class="p-3 text-gray-400">${esc(o.bairro || '-')}</td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${c}-500/10 text-${c}-400">${l}</span>${o.paid ? `<div class="text-[10px] text-gray-500 mt-1">${esc(o.pay)}</div>` : ''}</td><td class="p-3 font-bold text-white">${money(o.total)}</td><td class="p-3 text-right whitespace-nowrap"><div class="inline-flex items-center gap-1"><button onclick="toggleOrderDetails(${o.id})" aria-label="${expandedOrderId === o.id ? 'Ocultar' : 'Ver'} pedido ${o.id}" title="${expandedOrderId === o.id ? 'Ocultar pedido' : 'Ver pedido'}" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="${expandedOrderId === o.id ? 'chevron-up' : 'list'}" class="w-4 h-4"></i></button><button onclick="printThermal('kitchen',${o.id})" aria-label="Reimprimir comanda da cozinha do pedido ${o.id}" title="Reimprimir cozinha" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="chef-hat" class="w-4 h-4"></i></button><button onclick="printThermal('caixa',${o.id})" aria-label="Reimprimir comanda geral do pedido ${o.id}" title="Reimprimir comanda geral" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="printer" class="w-4 h-4"></i></button>${live && !o.paid ? `<button onclick="receive(${o.id})" class="bg-gold-500 text-black text-xs font-bold px-2 py-1 rounded">Receber</button><button onclick="cancelOrder(${o.id})" aria-label="Cancelar pedido ${o.id}" title="Cancelar pedido" class="text-red-400 text-xs px-1">✕</button>` : ''}</div></td></tr>${expandedOrderId === o.id ? details : ''}`;
+                return `<tr class="hover:bg-dark-hover"><td class="p-3 font-bold text-gold-500">#${o.id}</td><td class="p-3 font-medium text-white">${esc(o.type === 'DELIVERY' ? o.cli : where(o))}${o.type !== 'DELIVERY' && o.cli ? `<div class="text-[10px] text-gray-300">${esc(o.cli)}</div>` : ''}<div class="text-[10px] text-gray-500">${esc(o.by || '')}</div></td><td class="p-3 text-gray-400">${esc(o.bairro || '-')}</td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${c}-500/10 text-${c}-400">${l}</span>${o.paid ? `<div class="text-[10px] text-gray-500 mt-1">${esc(o.pay)}</div>` : ''}</td><td class="p-3 font-bold text-white">${money(o.total)}</td><td class="p-3 text-right whitespace-nowrap"><div class="inline-flex items-center gap-1"><button onclick="toggleOrderDetails(${o.id})" aria-label="${expandedOrderId === o.id ? 'Ocultar' : 'Ver'} pedido ${o.id}" title="${expandedOrderId === o.id ? 'Ocultar pedido' : 'Ver pedido'}" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="${expandedOrderId === o.id ? 'chevron-up' : 'list'}" class="w-4 h-4"></i></button><button onclick="printThermal('kitchen',${o.id})" aria-label="Reimprimir comanda da cozinha do pedido ${o.id}" title="Reimprimir cozinha" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="chef-hat" class="w-4 h-4"></i></button><button onclick="printThermal('caixa',${o.id})" aria-label="Reimprimir comanda geral do pedido ${o.id}" title="Reimprimir comanda geral" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="printer" class="w-4 h-4"></i></button>${live && !o.paid ? `<button onclick="receive(${o.id})" class="bg-gold-500 text-black text-xs font-bold px-2 py-1 rounded">Receber</button><button onclick="cancelOrder(${o.id})" aria-label="Cancelar pedido ${o.id}" title="Cancelar pedido" class="text-red-400 text-xs px-1">✕</button>` : ''}</div></td></tr>${expandedOrderId === o.id ? details : ''}`;
             }).join('') || '<tr><td colspan="6" class="p-6 text-center text-gray-500">Nenhum pedido ainda</td></tr>';
             lucide.createIcons();
         }
@@ -2824,7 +2864,9 @@ R$ 130,00
                 h = top('*** COZINHA ***') + items.map((item, index) => renderItem({ ...item, name: String(item.name || '').toUpperCase() }, index, true)).join('<div class="tk-hr"></div>')
                   + `<div class="tk-hr2"></div><div class="tk-c tk-sm">Total de itens: ${items.reduce((a, x) => a + (Number(x.qty) || 0), 0)}</div>`;
             } else {
-                const cli = o.type === 'DELIVERY' ? `<div class="tk-b">CLIENTE</div><div>${esc(o.cli)}</div><div>${esc(o.tel)}</div><div>${esc(o.end)}</div><div class="tk-b">Bairro: ${esc(o.bairro)}</div><div class="tk-hr"></div>` : '';
+                const cli = o.type === 'DELIVERY'
+                    ? `<div class="tk-b">CLIENTE</div><div>${esc(o.cli)}</div><div>${esc(o.tel)}</div><div>${esc(o.end)}</div><div class="tk-b">Bairro: ${esc(o.bairro)}</div><div class="tk-hr"></div>`
+                    : o.cli ? `<div class="tk-b">CLIENTE</div><div>${esc(o.cli)}</div><div class="tk-hr"></div>` : '';
                 const pay = o.paid ? `PAGO • ${esc(o.pay)}` : (o.payPref ? `Pagar na entrega • ${esc(o.payPref)}` : 'A RECEBER');
                 h = top(type === 'cancel' ? 'COMPROVANTE DE CANCELAMENTO' : 'COMANDA GERAL') + cli
                   + items.map((item, index) => `<div class="tk-row tk-b"><span>${qzSettings.options.showItemNumber ? `${index + 1}. ` : ''}${Number(item.qty) || 0}x ${esc(item.name || '')}</span><span>${money((Number(item.qty) || 0) * (Number(item.price) || 0))}</span></div>${det(item, index)}`).join('<div style="height:4px"></div>')
@@ -2925,7 +2967,7 @@ R$ 130,00
             const dg = digits(o.tel), nm = norm(o.cli);
             let c = S.clientes.find(x => dg.length >= 8 ? digits(x.tel) === dg : (!digits(x.tel) && norm(x.cli) === nm));
             if (!c) { c = { id: Date.now() + Math.floor(Math.random() * 1000), n: 0 }; S.clientes.push(c); }
-            Object.assign(c, { cli: o.cli, tel: o.tel, end: o.end, bairro: o.bairro, taxa: o.taxa || 0, last: Date.now() }); c.n++;
+            Object.assign(c, { cli: o.cli, tel: formatBrazilPhone(o.tel), end: o.end, bairro: o.bairro, taxa: o.taxa || 0, last: Date.now() }); c.n++;
         }
         function buscaCli(v) {
             const q = norm(v.trim()), dg = digits(v), box = $('o-busca-res');
@@ -2936,23 +2978,23 @@ R$ 130,00
         }
         function selCli(id) {
             const c = S.clientes.find(x => x.id === id); if (!c) return;
-            $('o-cli').value = c.cli; $('o-tel').value = c.tel; $('o-end').value = c.end; $('o-bairro').value = c.bairro; $('o-taxa').value = c.taxa || '';
-            $('o-conf-txt').innerHTML = `${esc(c.cli)} • ${esc(c.tel)}<br>${esc(c.end)}<br>Bairro: ${esc(c.bairro)}`;
+            $('o-cli').value = c.cli; $('o-tel').value = formatBrazilPhone(c.tel); $('o-end').value = c.end; $('o-bairro').value = c.bairro; $('o-taxa').value = ['7', '8', '9', '10'].includes(String(c.taxa)) ? String(c.taxa) : '7';
+            $('o-conf-txt').innerHTML = `${esc(c.cli)} • ${esc(formatBrazilPhone(c.tel))}<br>${esc(c.end)}<br>Bairro: ${esc(c.bairro)}`;
             $('o-conf').checked = false; $('o-conf-box').classList.remove('hidden'); cliLoaded = true;
             $('o-busca').value = ''; $('o-busca-res').classList.add('hidden'); renderCart();
         }
         function renderClientes() {
             const q = norm(($('cli-q').value || '').trim()), dg = digits($('cli-q').value);
             const r = S.clientes.filter(c => !q || norm(c.cli).includes(q) || (dg.length >= 3 && digits(c.tel).includes(dg))).sort((a, b) => b.last - a.last);
-            $('cli-body').innerHTML = r.map(c => `<tr class="hover:bg-dark-hover"><td class="p-3 font-semibold text-white">${esc(c.cli)}</td><td class="p-3">${esc(c.tel)}</td><td class="p-3 text-gray-400">${esc(c.end)}<div class="text-[10px]">Bairro: ${esc(c.bairro)}</div></td><td class="p-3">${c.n}<div class="text-[10px] text-gray-500">${new Date(c.last).toLocaleDateString('pt-BR')}</div></td><td class="p-3 text-right space-x-2 whitespace-nowrap"><button onclick="editCli(${c.id})" class="text-gold-400 hover:text-white">Editar</button><button onclick="delCli(${c.id})" class="text-red-400 hover:text-red-300">Excluir</button></td></tr>`).join('') || '<tr><td colspan="5" class="p-6 text-center text-gray-500">Nenhum cliente cadastrado ainda</td></tr>';
+            $('cli-body').innerHTML = r.map(c => `<tr class="hover:bg-dark-hover"><td class="p-3 font-semibold text-white">${esc(c.cli)}</td><td class="p-3">${esc(formatBrazilPhone(c.tel))}</td><td class="p-3 text-gray-400">${esc(c.end)}<div class="text-[10px]">Bairro: ${esc(c.bairro)}</div></td><td class="p-3">${c.n}<div class="text-[10px] text-gray-500">${new Date(c.last).toLocaleDateString('pt-BR')}</div></td><td class="p-3 text-right space-x-2 whitespace-nowrap"><button onclick="editCli(${c.id})" class="text-gold-400 hover:text-white">Editar</button><button onclick="delCli(${c.id})" class="text-red-400 hover:text-red-300">Excluir</button></td></tr>`).join('') || '<tr><td colspan="5" class="p-6 text-center text-gray-500">Nenhum cliente cadastrado ainda</td></tr>';
         }
         function editCli(id) {
             const c = S.clientes.find(x => x.id === id); if (!c) return;
             const n = prompt('Nome:', c.cli); if (n === null) return;
-            const t = prompt('Telefone:', c.tel); if (t === null) return;
+            const t = prompt('Telefone:', formatBrazilPhone(c.tel)); if (t === null) return;
             const e = prompt('Endereço completo:', c.end); if (e === null) return;
             const b = prompt('Bairro:', c.bairro); if (b === null) return;
-            Object.assign(c, { cli: n.trim(), tel: t.trim(), end: e.trim(), bairro: b.trim() }); save(); renderClientes();
+            Object.assign(c, { cli: n.trim(), tel: formatBrazilPhone(t), end: e.trim(), bairro: b.trim() }); save(); renderClientes();
         }
         function delCli(id) { if (confirm('Excluir este cliente do cadastro?')) { S.clientes = S.clientes.filter(x => x.id !== id); save(); renderClientes(); } }
 
@@ -3014,7 +3056,7 @@ R$ 130,00
             const feeFromTotal = total > itemsTotal ? total - itemsTotal : 0;
             const feeFromSubtotal = total > sub ? total - sub : 0;
             const deliveryFee = feeFromTotal || feeFromSubtotal;
-            const o = { id: num && !S.orders.some(x => x.id === num) ? num : 0, type: 'DELIVERY', cli: g(/(?:👤|Cliente\s*:?)\s*\*?([^\n*]+)/i) || 'Cliente WhatsApp', tel: g(/📞\s*([^\n]+)/), end: addressParts.join(' · '), bairro: neighborhood || (address.includes(',') ? address.split(',').pop().trim() : ''), items, taxa: deliveryFee, by: currentUser?.name || 'Importação WhatsApp', byId: currentUser?.id || null,
+            const o = { id: num && !S.orders.some(x => x.id === num) ? num : 0, type: 'DELIVERY', cli: g(/(?:👤|Cliente\s*:?)\s*\*?([^\n*]+)/i) || 'Cliente WhatsApp', tel: formatBrazilPhone(g(/📞\s*([^\n]+)/)), end: addressParts.join(' · '), bairro: neighborhood || (address.includes(',') ? address.split(',').pop().trim() : ''), items, taxa: deliveryFee, by: currentUser?.name || 'Importação WhatsApp', byId: currentUser?.id || null,
                 payPref: /pix/i.test(payment) ? 'PIX' : /dinheiro/i.test(payment) ? 'Dinheiro' : /cr[eé]dito/i.test(payment) ? 'Cartão de Crédito' : /d[eé]bito/i.test(payment) ? 'Cartão de Débito' : '' };
             if (!finalize(o, 'Pagar depois')) return;
             $('whatsapp-input').value = '';
