@@ -106,6 +106,21 @@
                 max-height: calc(100vh - 24rem);
             }
         }
+        @media (max-width: 767px) {
+            #sidebar {
+                position: fixed;
+                top: 57px;
+                left: 0;
+                height: calc(100dvh - 57px);
+            }
+            #sidebar-backdrop:not(.hidden) {
+                display: block;
+                position: fixed;
+                inset: 57px 0 0;
+                z-index: 15;
+                background: rgb(0 0 0 / 55%);
+            }
+        }
     </style>
 </head>
 <body class="bg-dark-bg text-gray-100 font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-gold-500 selection:text-black">
@@ -113,7 +128,7 @@
     <!-- Topbar principal (Restrita por permissão) -->
     <header class="no-print bg-dark-card border-b border-dark-border sticky top-0 z-30 px-4 py-3 flex items-center justify-between shadow-lg">
         <div class="flex items-center space-x-3">
-            <button id="btn-toggle-sidebar" class="md:hidden text-gray-300 hover:text-white">
+            <button id="btn-toggle-sidebar" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar" class="md:hidden text-gray-300 hover:text-white">
                 <i data-lucide="menu" class="w-6 h-6"></i>
             </button>
             <div class="flex items-center space-x-2">
@@ -147,7 +162,7 @@
                     <p class="mt-2 text-[11px] text-gray-400">Se a impressora demorar para responder, reconecte e atualize a lista de impressoras.</p>
                     <button id="qz-reconnect-button" type="button" onclick="reconnectQzTray()" class="mt-3 w-full flex items-center justify-center gap-2 rounded-lg bg-gold-500 px-3 py-2 text-xs font-bold text-black hover:bg-gold-600">
                         <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-                        <span>Reconectar e atualizar</span>
+                        <span id="qz-reconnect-label">Reconectar e atualizar</span>
                     </button>
                 </div>
             </div>
@@ -231,6 +246,7 @@
                 <span>Versão 2.5.0</span>
             </div>
         </aside>
+        <div id="sidebar-backdrop" class="hidden md:hidden" aria-hidden="true"></div>
 
         <!-- Main Content Area -->
         <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-dark-bg">
@@ -1314,6 +1330,7 @@ R$ 130,00
             if (tabId === 'config-impressao' && !canManagePromotions()) {
                 return toast('Apenas administrador e gerente podem configurar impressoras.');
             }
+            if (window.matchMedia('(max-width: 767px)').matches) setMobileSidebarOpen(false);
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
             document.querySelectorAll('.nav-btn').forEach(b => {
@@ -1652,6 +1669,13 @@ R$ 130,00
         let qzAvailablePrinters = [];
         let qzConnectionState = 'disconnected';
         let qzReconnectPending = false;
+        const qzClientId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const remotePrinterHosts = new Map();
+        const REMOTE_QZ_TIMEOUT_MS = 15000;
+        let qzPresenceChannel = null;
+        let qzPresenceTimer = null;
+        let qzPresenceWasConnected = false;
+        let qzPresenceLastSentAt = 0;
         try {
             const storedQzSettings = JSON.parse(localStorage.getItem(QZ_SETTINGS_KEY) || '{}');
             qzSettings = mergeQzSettings(storedQzSettings);
@@ -1713,11 +1737,21 @@ R$ 130,00
             return typeof qz !== 'undefined' && Boolean(qz.websocket.isActive());
         }
 
+        function hasRemotePrinterConnection() {
+            const now = Date.now();
+            remotePrinterHosts.forEach((lastSeen, clientId) => {
+                if (now - lastSeen > REMOTE_QZ_TIMEOUT_MS) remotePrinterHosts.delete(clientId);
+            });
+            return remotePrinterHosts.size > 0;
+        }
+
         function updateQzConnectionIndicator() {
-            const connected = isQzConnected();
-            qzConnectionState = qzReconnectPending ? 'connecting' : connected ? 'connected' : 'disconnected';
+            const localConnected = isQzConnected();
+            const remoteConnected = !localConnected && hasRemotePrinterConnection();
+            qzConnectionState = qzReconnectPending ? 'connecting' : localConnected || remoteConnected ? 'connected' : 'disconnected';
             const label = qzConnectionState === 'connecting' ? 'Conectando ao QZ Tray...' :
-                qzConnectionState === 'connected' ? 'QZ Tray conectado' : 'QZ Tray desconectado';
+                localConnected ? 'QZ Tray conectado neste dispositivo' :
+                remoteConnected ? 'Impressora conectada no computador' : 'Impressora desconectada';
             const color = qzConnectionState === 'connecting' ? 'bg-amber-400' :
                 qzConnectionState === 'connected' ? 'bg-emerald-500' : 'bg-red-500';
             const button = $('qz-connection-button');
@@ -1729,12 +1763,53 @@ R$ 130,00
             if (menuLabel) menuLabel.textContent = label;
             const settingsLabel = $('qz-settings-status');
             if (settingsLabel) settingsLabel.textContent = label;
+            const reconnectLabel = $('qz-reconnect-label');
+            if (reconnectLabel) reconnectLabel.textContent = remoteConnected ? 'Reconectar no computador' : 'Reconectar e atualizar';
             ['qz-connection-indicator', 'qz-menu-indicator'].forEach(id => {
                 const indicator = $(id);
                 if (indicator) indicator.className = `w-2.5 h-2.5 rounded-full ${color}${qzConnectionState === 'connected' ? ' animate-pulse' : ''}`;
             });
             const settingsIndicator = $('qz-settings-indicator');
             if (settingsIndicator) settingsIndicator.className = `w-2.5 h-2.5 rounded-full ${color}${qzConnectionState === 'connected' ? ' animate-pulse' : ''}`;
+        }
+
+        function initQzPresence() {
+            if (!supabaseClient || qzPresenceChannel) return;
+            qzPresenceChannel = supabaseClient
+                .channel('qz-printer-presence', { config: { private: false } })
+                .on('broadcast', { event: 'printer-status' }, message => {
+                    const payload = message.payload;
+                    if (!payload || payload.clientId === qzClientId) return;
+                    if (payload.connected) remotePrinterHosts.set(payload.clientId, Date.now());
+                    else remotePrinterHosts.delete(payload.clientId);
+                    updateQzConnectionIndicator();
+                })
+                .subscribe(status => {
+                    if (status === 'SUBSCRIBED') publishQzPresence(true);
+                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        console.warn('Não foi possível compartilhar o status do QZ Tray entre dispositivos.');
+                    }
+                });
+            if (!qzPresenceTimer) qzPresenceTimer = setInterval(() => publishQzPresence(false), 5000);
+        }
+
+        async function publishQzPresence(force) {
+            if (!qzPresenceChannel) return;
+            const connected = isQzConnected();
+            const now = Date.now();
+            if (!force && connected && now - qzPresenceLastSentAt < 5000) return;
+            if (!connected && !qzPresenceWasConnected && !force) return;
+            try {
+                await qzPresenceChannel.send({
+                    type: 'broadcast',
+                    event: 'printer-status',
+                    payload: { clientId: qzClientId, connected }
+                });
+                qzPresenceWasConnected = connected;
+                qzPresenceLastSentAt = now;
+            } catch (error) {
+                console.error('Falha ao atualizar o status remoto da impressora:', error);
+            }
         }
 
         function toggleQzConnectionMenu() {
@@ -1744,6 +1819,22 @@ R$ 130,00
             menu.classList.toggle('hidden', !isOpening);
             button.setAttribute('aria-expanded', String(isOpening));
             updateQzConnectionIndicator();
+        }
+
+        function setMobileSidebarOpen(open) {
+            const sidebar = $('sidebar');
+            const backdrop = $('sidebar-backdrop');
+            const button = $('btn-toggle-sidebar');
+            if (!sidebar || !backdrop || !button) return;
+            sidebar.classList.toggle('-translate-x-full', !open);
+            sidebar.classList.toggle('translate-x-0', open);
+            backdrop.classList.toggle('hidden', !open);
+            button.setAttribute('aria-expanded', String(open));
+            button.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+        }
+
+        function toggleMobileSidebar() {
+            setMobileSidebarOpen($('btn-toggle-sidebar').getAttribute('aria-expanded') !== 'true');
         }
 
         function renderQzSettings(printers) {
@@ -2036,6 +2127,10 @@ R$ 130,00
         }
 
         async function reconnectQzTray() {
+            if (!isQzConnected() && hasRemotePrinterConnection()) {
+                toast('A impressora está conectada no computador. Reconecte pelo ícone da impressora nesse computador.');
+                return;
+            }
             const button = $('qz-reconnect-button');
             button.disabled = true;
             button.classList.add('opacity-60', 'cursor-wait');
@@ -2082,6 +2177,9 @@ R$ 130,00
             $('o-pay').innerHTML = ['Pagar depois', ...PAYS].map(p => `<option>${p}</option>`).join('');
             renderQzSettings(); updateQzConnectionIndicator(); onTypeChange(); renderMenu(); renderKDS(); renderCardapioAdmin();
             setInterval(updateQzConnectionIndicator, 2000);
+            initQzPresence();
+            $('btn-toggle-sidebar').addEventListener('click', toggleMobileSidebar);
+            $('sidebar-backdrop').addEventListener('click', () => setMobileSidebarOpen(false));
             document.addEventListener('click', event => {
                 const container = $('qz-connection-button').parentElement;
                 if (!container.contains(event.target)) {
