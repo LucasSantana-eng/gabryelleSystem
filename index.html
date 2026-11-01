@@ -18,6 +18,10 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- QZ Tray (impressão direta em impressoras térmicas) -->
+    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js"></script>
+    <!-- QR codes opcionais nas vias impressas -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -36,6 +40,7 @@
                             border: '#2d2d35',
                             hover: '#282830'
                         }
+
                     }
                 }
             }
@@ -74,6 +79,33 @@
             background: #2d2d35;
             border-radius: 3px;
         }
+
+        @media (min-width: 1024px) {
+            body {
+                height: 100vh;
+                overflow: hidden;
+            }
+            body > div.flex.flex-1.overflow-hidden.relative,
+            body > div.flex.flex-1.overflow-hidden.relative main {
+                min-height: 0;
+            }
+            #tab-mesas .mesa-layout {
+                grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+            }
+            #tab-mesas #mesas-grid {
+                grid-column: span 1;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+            }
+            #tab-mesas #mesa-details {
+                position: sticky;
+                top: 1rem;
+                max-height: calc(100vh - 7rem);
+                overflow-y: auto;
+            }
+            #tab-mesas .mesa-orders-list {
+                max-height: calc(100vh - 24rem);
+            }
+        }
     </style>
 </head>
 <body class="bg-dark-bg text-gray-100 font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-gold-500 selection:text-black">
@@ -102,6 +134,23 @@
                 <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
                 <span>Tela Cheia</span>
             </button>
+            <div class="relative">
+                <button id="qz-connection-button" type="button" onclick="toggleQzConnectionMenu()" aria-label="QZ Tray desconectado" aria-expanded="false" aria-controls="qz-connection-menu" title="QZ Tray desconectado" class="flex items-center gap-2 bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-300 hover:text-white transition">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    <span id="qz-connection-indicator" class="w-2.5 h-2.5 rounded-full bg-red-500" aria-hidden="true"></span>
+                </button>
+                <div id="qz-connection-menu" class="hidden absolute right-0 top-full mt-2 z-50 w-64 rounded-xl border border-dark-border bg-dark-card p-3 shadow-xl">
+                    <div class="flex items-center gap-2 text-xs text-gray-200">
+                        <span id="qz-menu-indicator" class="w-2.5 h-2.5 rounded-full bg-red-500" aria-hidden="true"></span>
+                        <span id="qz-connection-label">QZ Tray desconectado</span>
+                    </div>
+                    <p class="mt-2 text-[11px] text-gray-400">Se a impressora demorar para responder, reconecte e atualize a lista de impressoras.</p>
+                    <button id="qz-reconnect-button" type="button" onclick="reconnectQzTray()" class="mt-3 w-full flex items-center justify-center gap-2 rounded-lg bg-gold-500 px-3 py-2 text-xs font-bold text-black hover:bg-gold-600">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                        <span>Reconectar e atualizar</span>
+                    </button>
+                </div>
+            </div>
 
             <!-- Card de Usuário Logado -->
             <div class="flex items-center bg-dark-bg border border-dark-border rounded px-2.5 py-1">
@@ -168,6 +217,11 @@
                     <button onclick="switchTab('equipe')" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-dark-hover hover:text-gold-500 transition">
                         <i data-lucide="users" class="w-4 h-4"></i>
                         <span>Garçons / Equipe</span>
+                    </button>
+
+                    <button onclick="switchTab('config-impressao')" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-dark-hover hover:text-gold-500 transition">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        <span>Configuração de impressão</span>
                     </button>
                 </div>
             </div>
@@ -301,7 +355,7 @@
                     <div class="bg-dark-card rounded-xl border border-dark-border p-4 space-y-3 h-fit xl:sticky xl:top-0">
                         <h3 class="font-bold text-sm text-gold-500 tracking-wide">PEDIDO ATUAL</h3>
                         <div class="grid grid-cols-2 gap-2">
-                            <select id="o-type" onchange="onTypeChange()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"><option value="MESA">Mesa</option><option value="BALCAO">Balcão</option><option value="DELIVERY">Delivery</option></select>
+                            <select id="o-type" onchange="onTypeChange()" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"><option value="MESA">Mesa</option><option value="BALCAO">Balcão / no local</option><option value="RETIRADA">Retirada</option><option value="DELIVERY">Delivery</option></select>
                             <select id="o-mesa" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></select>
                         </div>
                         <div id="o-del-box" class="hidden space-y-2">
@@ -316,7 +370,7 @@
                         <div id="cart-svc-row" class="hidden border-t border-dark-border pt-2"><div class="flex justify-between items-center text-xs text-gray-300"><label class="flex items-center gap-2"><input id="o-svc" type="checkbox" checked onchange="renderCart()"> Taxa de serviço (<span id="svc-pct"></span>%)</label><span id="cart-svc"></span></div></div>
                         <div class="flex justify-between font-bold text-sm text-gold-400 border-t border-dark-border pt-2"><span>TOTAL</span><span id="cart-total">R$ 0,00</span></div>
                         <select id="o-pay" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></select>
-                        <label class="flex items-center gap-2 text-xs text-gray-400"><input id="o-print" type="checkbox" checked> Imprimir comanda da cozinha</label>
+                        <label class="flex items-center gap-2 text-xs text-gray-400"><input id="o-print" type="checkbox" checked> Imprimir comanda (QZ Tray: cozinha e caixa)</label>
                         <button onclick="createOrder()" class="w-full bg-gold-500 hover:bg-gold-600 text-black font-bold py-2.5 rounded-lg text-xs">FINALIZAR PEDIDO</button>
                     </div>
                 </div>
@@ -331,6 +385,17 @@
                         </div>
                     </div>
                 </details>
+                <details class="bg-dark-card p-4 rounded-xl border border-dark-border">
+                    <summary class="cursor-pointer text-sm font-bold text-white">Impressão • QZ Tray</summary>
+                    <div class="mt-3 space-y-3">
+                        <p class="text-xs text-gray-400">Configure impressoras, setores e vias na área de configuração. O QZ Tray permite imprimir diretamente sem abrir a janela do navegador.</p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="connectQzTray()" class="px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-xs text-gray-200 hover:border-gold-500">Conectar e buscar impressoras</button>
+                            <span id="qz-status-inline" class="text-xs text-gray-400">QZ Tray não conectado</span>
+                        </div>
+                        <button onclick="switchTab('config-impressao')" class="px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-xs text-gray-200 hover:border-gold-500">Abrir configuração de impressão</button>
+                    </div>
+                </details>
             </section>
 
             <!-- MÓDULO 3B: CARDÁPIO / PREÇOS (RESTRITO) -->
@@ -341,6 +406,89 @@
                     <p id="cardapio-alert" class="text-xs text-amber-400 mt-2"></p>
                 </div>
                 <div id="cardapio-admin" class="space-y-4"></div>
+            </section>
+
+            <section id="tab-config-impressao" class="tab-content hidden space-y-5">
+                <div class="bg-dark-card p-4 rounded-xl border border-dark-border">
+                    <h2 class="text-xl font-bold text-white">Configuração de impressão</h2>
+                    <p class="mt-1 text-xs text-gray-400">Configure as impressoras e as vias usadas neste computador. As preferências ficam salvas localmente.</p>
+                </div>
+                <div class="bg-dark-card p-4 rounded-xl border border-dark-border space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                            <h3 class="font-bold text-sm text-white">Agente de impressão</h3>
+                            <p class="text-xs text-gray-400 mt-1">O QZ Tray precisa estar instalado e aberto para impressão direta.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="qz-settings-indicator" class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                            <span id="qz-settings-status" class="text-xs text-gray-300">QZ Tray não conectado</span>
+                            <button onclick="connectQzTray()" class="px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-xs text-gray-200 hover:border-gold-500">Atualizar</button>
+                        </div>
+                    </div>
+                    <label class="flex items-center gap-2 text-xs text-gray-300">
+                        <input id="qz-enabled" type="checkbox" onchange="saveQzSettings()">
+                        Ativar impressão automática pelo QZ Tray
+                    </label>
+                    <label class="flex items-center gap-2 text-xs text-gray-300">
+                        <input id="qz-automatic" type="checkbox" onchange="saveQzSettings()">
+                        Imprimir automaticamente ao lançar novos pedidos
+                    </label>
+                    <p id="qz-status" class="text-xs text-gray-400">Conecte ao QZ Tray para listar as impressoras disponíveis.</p>
+                </div>
+                <div class="bg-dark-card p-4 rounded-xl border border-dark-border space-y-4">
+                    <div>
+                        <h3 class="font-bold text-sm text-white">Impressoras</h3>
+                        <p class="text-xs text-gray-400 mt-1">Conecte o QZ Tray, escolha uma impressora encontrada e adicione-a à lista.</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <select id="qz-printer-add-select" class="flex-1 bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200">
+                            <option value="">Conecte o QZ Tray para listar impressoras</option>
+                        </select>
+                        <button onclick="addConfiguredPrinter()" class="px-3 py-2 rounded-lg bg-gold-500 text-black text-xs font-bold hover:bg-gold-600">Adicionar impressora</button>
+                        <button onclick="testQzPrinters()" class="px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-xs text-gray-200 hover:border-gold-500">Testar setores</button>
+                    </div>
+                    <div id="qz-printer-list" class="space-y-2"></div>
+                </div>
+                <div class="bg-dark-card p-4 rounded-xl border border-dark-border space-y-3">
+                    <div>
+                        <h3 class="font-bold text-sm text-white">Setores de impressão</h3>
+                        <p class="text-xs text-gray-400 mt-1">Geral recebe a via completa; Cozinha recebe a via de produção.</p>
+                    </div>
+                    <div id="qz-sector-list" class="space-y-2"></div>
+                    <div>
+                        <h4 class="text-xs font-semibold text-gray-300 mb-2">Direcionamento por categoria</h4>
+                        <p class="text-[10px] text-gray-500 mb-2">Categorias sem direcionamento serão impressas na Cozinha.</p>
+                        <div id="qz-category-routing" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+                    </div>
+                    <button onclick="addPrintSector()" class="text-xs font-semibold text-gold-400 hover:text-gold-300">+ Adicionar setor de produção</button>
+                </div>
+                <div class="bg-dark-card p-4 rounded-xl border border-dark-border space-y-4">
+                    <div>
+                        <h3 class="font-bold text-sm text-white">Configurações das impressões</h3>
+                        <p class="text-xs text-gray-400 mt-1">Defina a quantidade de vias padrão e de produção para cada tipo de pedido.</p>
+                    </div>
+                    <div id="qz-copy-settings" class="grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
+                </div>
+                <div class="bg-dark-card p-4 rounded-xl border border-dark-border space-y-3">
+                    <h3 class="font-bold text-sm text-white">Configurações gerais</h3>
+                    <div id="qz-general-settings" class="space-y-2"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label class="text-xs text-gray-400">Mensagem da via padrão
+                            <textarea id="qz-standard-message" rows="3" oninput="saveQzSettings()" class="mt-1 w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200"></textarea>
+                        </label>
+                        <label class="text-xs text-gray-400">Mensagem de fechamento da mesa/comanda
+                            <textarea id="qz-table-message" rows="3" oninput="saveQzSettings()" class="mt-1 w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200"></textarea>
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label class="text-xs text-gray-400">QR Code da via padrão (URL opcional)
+                            <input id="qz-standard-qr" type="url" oninput="saveQzSettings()" placeholder="https://..." class="mt-1 w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200">
+                        </label>
+                        <label class="text-xs text-gray-400">QR Code de fechamento da mesa (URL opcional)
+                            <input id="qz-table-qr" type="url" oninput="saveQzSettings()" placeholder="https://..." class="mt-1 w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200">
+                        </label>
+                    </div>
+                </div>
             </section>
 
             <!-- MÓDULO: CLIENTES DO DELIVERY -->
@@ -359,15 +507,29 @@
 
             <!-- MÓDULO 4: MESAS E COMANDAS -->
             <section id="tab-mesas" class="tab-content hidden space-y-6">
-                <div class="flex justify-between items-center bg-dark-card p-4 rounded-xl border border-dark-border">
-                    <h2 class="text-xl font-bold text-white">Mapa de Mesas</h2>
-                    <div class="flex items-center space-x-4 text-xs">
+                <div class="bg-dark-card p-4 rounded-xl border border-dark-border space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Mesas e comandas</h2>
+                            <p class="text-xs text-gray-400">Selecione uma mesa para acompanhar os pedidos e a conta em aberto.</p>
+                        </div>
+                        <div class="flex items-center space-x-4 text-xs">
                         <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-gray-300">Livre</span></span>
                         <span class="flex items-center space-x-1"><span class="w-3 h-3 rounded-full bg-gold-500"></span><span class="text-gray-300">Ocupada</span></span>
+                        </div>
+                    </div>
+                    <div id="mesas-summary" class="grid grid-cols-1 sm:grid-cols-3 gap-2"></div>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input id="mesas-search" oninput="renderMesasGrid()" placeholder="Buscar número da mesa..." inputmode="numeric" class="w-full sm:max-w-xs bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                        <select id="mesas-filter" onchange="renderMesasGrid()" class="bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                            <option value="TODAS">Todas as mesas</option>
+                            <option value="ABERTAS">Mesas abertas</option>
+                            <option value="LIVRES">Mesas livres</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
+                <div class="mesa-layout grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
                     <div id="mesas-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 xl:col-span-2 gap-3">
                         <!-- Preenchido via JS -->
                     </div>
@@ -604,6 +766,12 @@
         let lastOnlineOrderError = '';
         let cashStatusSyncPending = false;
         let realtimeOnlineOrdersChannel = null;
+        let sharedStateChannel = null;
+        let sharedStateSyncTimer = null;
+        let sharedStateSyncPending = false;
+        let sharedStateSaveCount = 0;
+        let sharedStateUpdatedAt = '';
+        let lastSharedStateSaveError = '';
 
         const defaultWhatsAppSample = `#️⃣ *Pedido Nº 3887*
 feito em 16/10/2026 21:15
@@ -645,7 +813,7 @@ R$ 130,00
             renderOrdersList();
             populateUserSelect();
             updateRolePermissions();
-            loadStateFromSupabase();
+            loadStateFromSupabase().finally(initSharedStateSync);
             initRealtimeOnlineOrders();
             document.addEventListener('pointerdown', activateOnlineOrderAudio, { once: true });
             document.addEventListener('keydown', activateOnlineOrderAudio, { once: true });
@@ -677,53 +845,132 @@ R$ 130,00
         async function loadStateFromSupabase() {
             if (!supabaseClient) return;
             try {
-                const { data, error } = await supabaseClient.from('app_state').select('data').eq('id', 'gp_state').single();
+                const { data, error } = await supabaseClient.from('app_state').select('data,updated_at').eq('id', 'gp_state').single();
                 if (error && error.code !== 'PGRST116') {
                     console.error('Erro ao carregar dados do Supabase:', error);
                     setSupabaseStatus('Supabase com erro');
                     return;
                 }
-                if (data && data.data) {
-                    S = data.data;
-                    S.menu = S.menu || JSON.parse(JSON.stringify(DEF));
-                    S.menu.promotionDays = Array.isArray(S.menu.promotionDays) ? S.menu.promotionDays : [3, 4];
-                    S.menu.promoPrices = S.menu.promoPrices && typeof S.menu.promoPrices === 'object' ? S.menu.promoPrices : {};
-                    normalizeCaixaState();
-                    renderAll();
-                    updateRolePermissions();
-                }
+                if (data?.data) applySharedState(data, true);
             } catch (err) {
                 console.error('Erro ao carregar dados do Supabase:', err);
                 setSupabaseStatus('Supabase com erro');
             }
         }
 
+        function applySharedState(row, force = false) {
+            if (!row?.data || sharedStateSaveCount) return false;
+            const incomingAt = row.updated_at || '';
+            if (!force && incomingAt && sharedStateUpdatedAt && Date.parse(incomingAt) <= Date.parse(sharedStateUpdatedAt)) return false;
+            const existingOrderIds = new Set((S.orders || []).map(order => String(order.id)));
+            S = row.data;
+            S.menu = S.menu || JSON.parse(JSON.stringify(DEF));
+            S.menu.promotionDays = Array.isArray(S.menu.promotionDays) ? S.menu.promotionDays : [3, 4];
+            S.menu.promoPrices = S.menu.promoPrices && typeof S.menu.promoPrices === 'object' ? S.menu.promoPrices : {};
+            normalizeCaixaState();
+            sharedStateUpdatedAt = incomingAt || sharedStateUpdatedAt;
+            renderAll(false);
+            updateRolePermissions();
+            if (!force) {
+                const newOrders = S.orders.filter(order => !existingOrderIds.has(String(order.id)) && order.status !== 'CANCELADO');
+                newOrders.forEach(scheduleRemoteOrderPrint);
+            }
+            return true;
+        }
+
+        const remotePrintQueue = new Set();
+        function scheduleRemoteOrderPrint(order) {
+            if (!order || order.printRequested === false || !qzSettings.enabled || !qzSettings.automatic) return;
+            const orderId = String(order.id);
+            if (remotePrintQueue.has(orderId)) return;
+            remotePrintQueue.add(orderId);
+            printBothThermal(order).catch(error => {
+                console.error(`Falha na impressão automática do pedido #${orderId}:`, error);
+                toast(`Pedido #${orderId} recebido, mas a impressão automática falhou: ${error.message}`);
+            });
+        }
+
+        function initSharedStateSync() {
+            if (!supabaseClient) return;
+            sharedStateChannel = supabaseClient
+                .channel('shared-pos-state')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state', filter: 'id=eq.gp_state' }, payload => {
+                    if (payload.new?.data) applySharedState(payload.new);
+                })
+                .subscribe(status => {
+                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        console.warn('Sincronização em tempo real indisponível; a atualização periódica continuará ativa.');
+                    }
+                });
+            if (!sharedStateSyncTimer) sharedStateSyncTimer = setInterval(syncSharedState, 5000);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') syncSharedState();
+            });
+            window.addEventListener('focus', syncSharedState);
+        }
+
+        async function syncSharedState() {
+            if (!supabaseClient || sharedStateSyncPending || sharedStateSaveCount) return false;
+            sharedStateSyncPending = true;
+            try {
+                const { data, error } = await supabaseClient.from('app_state').select('data,updated_at').eq('id', 'gp_state').single();
+                if (error && error.code !== 'PGRST116') throw error;
+                if (data?.data) applySharedState(data);
+                return true;
+            } catch (error) {
+                console.error('Não foi possível atualizar o estado compartilhado:', error);
+                return false;
+            } finally {
+                sharedStateSyncPending = false;
+            }
+        }
+
         // Persiste as alterações no localStorage e no Supabase
         async function save() {
+            const updatedAt = new Date().toISOString();
+            let startedSharedSave = false;
             try {
                 localStorage.setItem(KEY, JSON.stringify(S));
                 if (supabaseClient) {
-                    const { error } = await supabaseClient.from('app_state').upsert({ id: 'gp_state', data: S, updated_at: new Date().toISOString() });
+                    sharedStateSaveCount++;
+                    startedSharedSave = true;
+                    const { error } = await supabaseClient.from('app_state').upsert({ id: 'gp_state', data: S, updated_at: updatedAt });
                     if (error) {
                         console.error('Erro ao salvar dados no Supabase:', error);
                         setSupabaseStatus('Supabase com erro');
+                        if (lastSharedStateSaveError !== error.message) {
+                            toast(`Os dados foram salvos neste dispositivo, mas não sincronizados: ${error.message}`);
+                            lastSharedStateSaveError = error.message;
+                        }
+                    } else {
+                        sharedStateUpdatedAt = updatedAt;
+                        lastSharedStateSaveError = '';
                     }
                 }
             } catch (e) {
                 console.error('Erro ao salvar:', e);
                 setSupabaseStatus('Supabase com erro');
+            } finally {
+                if (startedSharedSave) sharedStateSaveCount--;
             }
         }
 
         async function persistCashStatusForOnlineOrders() {
             if (!supabaseClient) throw new Error('Supabase indisponível; não foi possível sincronizar o status do caixa.');
+            const updatedAt = new Date().toISOString();
             localStorage.setItem(KEY, JSON.stringify(S));
-            const { error } = await supabaseClient.from('app_state').upsert({
-                id: 'gp_state',
-                data: S,
-                updated_at: new Date().toISOString()
-            });
-            if (error) throw error;
+            sharedStateSaveCount++;
+            try {
+                const { error } = await supabaseClient.from('app_state').upsert({
+                    id: 'gp_state',
+                    data: S,
+                    updated_at: updatedAt
+                });
+                if (error) throw error;
+                sharedStateUpdatedAt = updatedAt;
+            } finally {
+                sharedStateSaveCount--;
+            }
         }
 
         function updateRolePermissions() {
@@ -1034,18 +1281,25 @@ R$ 130,00
                 if (!finalize(order, 'Pagar depois')) throw new Error('Não foi possível registrar o pedido no PDV.');
             }
 
+            const updatedAt = new Date().toISOString();
             try {
                 localStorage.setItem(KEY, JSON.stringify(S));
             } catch (error) {
                 throw new Error(`Não foi possível salvar o pedido no dispositivo: ${error.message}`);
             }
             if (!supabaseClient) throw new Error('Supabase indisponível; o pedido ficará pendente de sincronização.');
-            const { error } = await supabaseClient.from('app_state').upsert({
-                id: 'gp_state',
-                data: S,
-                updated_at: new Date().toISOString()
-            });
-            if (error) throw new Error(`Falha ao salvar o pedido no banco: ${error.message}`);
+            sharedStateSaveCount++;
+            try {
+                const { error } = await supabaseClient.from('app_state').upsert({
+                    id: 'gp_state',
+                    data: S,
+                    updated_at: updatedAt
+                });
+                if (error) throw new Error(`Falha ao salvar o pedido no banco: ${error.message}`);
+                sharedStateUpdatedAt = updatedAt;
+            } finally {
+                sharedStateSaveCount--;
+            }
 
             await callOrderBridge('staff_imported', { orderId: onlineOrder.id });
         }
@@ -1057,6 +1311,9 @@ R$ 130,00
             if (tabId === 'cardapio' && !canManagePromotions()) {
                 return toast('Apenas administrador e gerente podem alterar preços e promoções.');
             }
+            if (tabId === 'config-impressao' && !canManagePromotions()) {
+                return toast('Apenas administrador e gerente podem configurar impressoras.');
+            }
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
             document.querySelectorAll('.nav-btn').forEach(b => {
@@ -1064,7 +1321,12 @@ R$ 130,00
                 b.classList.toggle('bg-dark-hover', a); b.classList.toggle('text-gold-500', a);
             });
             if (tabId === 'cardapio') renderCardapioAdmin();
+            if (tabId === 'config-impressao') renderQzSettings();
             if (tabId === 'novo-pedido') renderMenu();
+            if (tabId === 'mesas') {
+                renderMesasGrid();
+                syncSharedState();
+            }
             if (tabId === 'clientes') renderClientes();
             lucide.createIcons();
         }
@@ -1327,6 +1589,75 @@ R$ 130,00
         if (S.menu.mf && S.menu.mf.join() === '1,2,2,3') S.menu.mf = [4, 4, 4, 4];
         if (S.menu.svc === undefined) S.menu.svc = 10;
         S.clientes = S.clientes || []; S.orders = S.orders || []; S.seq = S.seq || 1; S.caixa = S.caixa || newCaixa(); S.caixa.status = S.caixa.status || 'ABERTO'; S.caixaHistory = S.caixaHistory || [];
+        const QZ_SETTINGS_KEY = 'gp_qz_printers_v1';
+        const PRINT_ORDER_TYPES = [
+            { id: 'DELIVERY', label: 'Delivery' },
+            { id: 'RETIRADA', label: 'Retirada' },
+            { id: 'BALCAO', label: 'No local / balcão' },
+            { id: 'MESA', label: 'Mesa / comanda' }
+        ];
+        const DEFAULT_QZ_SETTINGS = {
+            enabled: false,
+            automatic: true,
+            printers: [],
+            sectors: [
+                { id: 'general', name: 'Geral', printerId: '' },
+                { id: 'kitchen', name: 'Cozinha', printerId: '' }
+            ],
+            categorySectors: {},
+            standardPrinters: { DELIVERY: '', RETIRADA: '', BALCAO: '', MESA: '' },
+            standardCopies: { DELIVERY: 1, RETIRADA: 1, BALCAO: 1, MESA: 1 },
+            productionCopies: { DELIVERY: 1, RETIRADA: 1, BALCAO: 1, MESA: 1 },
+            options: {
+                showItemNumber: true,
+                showAddonPrice: false,
+                showAddonName: true,
+                largeProductionFont: true,
+                multiplyOptions: false,
+                printCancellation: false,
+                printQrCode: false
+            },
+            standardMessage: '',
+            tableMessage: '',
+            standardQr: '',
+            tableQr: '',
+            kitchenPrinter: '',
+            cashierPrinter: ''
+        };
+        const mergeQzSettings = stored => {
+            const settings = {
+                ...DEFAULT_QZ_SETTINGS,
+                ...stored,
+                sectors: Array.isArray(stored?.sectors) ? stored.sectors : DEFAULT_QZ_SETTINGS.sectors.map(sector => ({ ...sector })),
+                printers: Array.isArray(stored?.printers) ? stored.printers : [],
+                categorySectors: { ...(stored?.categorySectors || {}) },
+                options: { ...DEFAULT_QZ_SETTINGS.options, ...(stored?.options || {}) },
+                standardPrinters: { ...DEFAULT_QZ_SETTINGS.standardPrinters, ...(stored?.standardPrinters || {}) },
+                standardCopies: { ...DEFAULT_QZ_SETTINGS.standardCopies, ...(stored?.standardCopies || {}) },
+                productionCopies: { ...DEFAULT_QZ_SETTINGS.productionCopies, ...(stored?.productionCopies || {}) }
+            };
+            const legacyPrinters = [settings.kitchenPrinter, settings.cashierPrinter].filter(Boolean);
+            legacyPrinters.forEach(name => {
+                if (!settings.printers.some(printer => printer.name === name)) {
+                    settings.printers.push({ id: name, name, columns: 42, profile: '80mm', encoding: 'UTF-8' });
+                }
+            });
+            const kitchen = settings.sectors.find(sector => sector.id === 'kitchen' || String(sector.name).toLowerCase() === 'cozinha');
+            const general = settings.sectors.find(sector => sector.id === 'general' || String(sector.name).toLowerCase() === 'geral');
+            if (kitchen && !kitchen.printerId) kitchen.printerId = settings.kitchenPrinter || '';
+            if (general && !general.printerId) general.printerId = settings.cashierPrinter || '';
+            return settings;
+        };
+        let qzSettings = DEFAULT_QZ_SETTINGS;
+        let qzAvailablePrinters = [];
+        let qzConnectionState = 'disconnected';
+        let qzReconnectPending = false;
+        try {
+            const storedQzSettings = JSON.parse(localStorage.getItem(QZ_SETTINGS_KEY) || '{}');
+            qzSettings = mergeQzSettings(storedQzSettings);
+        } catch (error) {
+            console.error('Não foi possível carregar as configurações do QZ Tray:', error);
+        }
         let cart = [], curCat = 'Pizzas', pm = null, selectedMesa = null, selectedCashHistoryId = null, expandedOrderId = null;
 
         const $ = id => document.getElementById(id);
@@ -1368,13 +1699,396 @@ R$ 130,00
             };
         }
 
+        function setQzStatus(message, isError = false) {
+            ['qz-status', 'qz-status-inline'].forEach(id => {
+                const status = $(id);
+                if (!status) return;
+                status.textContent = message;
+                status.className = `text-xs ${isError ? 'text-red-400' : 'text-gray-400'}`;
+            });
+            updateQzConnectionIndicator();
+        }
+
+        function isQzConnected() {
+            return typeof qz !== 'undefined' && Boolean(qz.websocket.isActive());
+        }
+
+        function updateQzConnectionIndicator() {
+            const connected = isQzConnected();
+            qzConnectionState = qzReconnectPending ? 'connecting' : connected ? 'connected' : 'disconnected';
+            const label = qzConnectionState === 'connecting' ? 'Conectando ao QZ Tray...' :
+                qzConnectionState === 'connected' ? 'QZ Tray conectado' : 'QZ Tray desconectado';
+            const color = qzConnectionState === 'connecting' ? 'bg-amber-400' :
+                qzConnectionState === 'connected' ? 'bg-emerald-500' : 'bg-red-500';
+            const button = $('qz-connection-button');
+            if (button) {
+                button.setAttribute('aria-label', label);
+                button.title = label;
+            }
+            const menuLabel = $('qz-connection-label');
+            if (menuLabel) menuLabel.textContent = label;
+            const settingsLabel = $('qz-settings-status');
+            if (settingsLabel) settingsLabel.textContent = label;
+            ['qz-connection-indicator', 'qz-menu-indicator'].forEach(id => {
+                const indicator = $(id);
+                if (indicator) indicator.className = `w-2.5 h-2.5 rounded-full ${color}${qzConnectionState === 'connected' ? ' animate-pulse' : ''}`;
+            });
+            const settingsIndicator = $('qz-settings-indicator');
+            if (settingsIndicator) settingsIndicator.className = `w-2.5 h-2.5 rounded-full ${color}${qzConnectionState === 'connected' ? ' animate-pulse' : ''}`;
+        }
+
+        function toggleQzConnectionMenu() {
+            const menu = $('qz-connection-menu');
+            const button = $('qz-connection-button');
+            const isOpening = menu.classList.contains('hidden');
+            menu.classList.toggle('hidden', !isOpening);
+            button.setAttribute('aria-expanded', String(isOpening));
+            updateQzConnectionIndicator();
+        }
+
+        function renderQzSettings(printers) {
+            if (Array.isArray(printers)) qzAvailablePrinters = printers;
+            const addSelect = $('qz-printer-add-select');
+            if (addSelect) {
+                const available = qzAvailablePrinters.filter(name => !qzSettings.printers.some(printer => printer.name === name));
+                addSelect.innerHTML = '<option value="">Selecione uma impressora encontrada</option>' +
+                    available.map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+            }
+            const enabled = $('qz-enabled');
+            if (enabled) enabled.checked = Boolean(qzSettings.enabled);
+            const automatic = $('qz-automatic');
+            if (automatic) automatic.checked = Boolean(qzSettings.automatic);
+            const standardMessage = $('qz-standard-message');
+            if (standardMessage) standardMessage.value = qzSettings.standardMessage || '';
+            const tableMessage = $('qz-table-message');
+            if (tableMessage) tableMessage.value = qzSettings.tableMessage || '';
+            const standardQr = $('qz-standard-qr');
+            if (standardQr) standardQr.value = qzSettings.standardQr || '';
+            const tableQr = $('qz-table-qr');
+            if (tableQr) tableQr.value = qzSettings.tableQr || '';
+            renderConfiguredPrinters();
+            renderPrintSectors();
+            renderProductCategoryRouting();
+            renderPrintCopies();
+            renderPrintOptions();
+            updateQzConnectionIndicator();
+        }
+
+        function printerOptions(selected = '') {
+            return '<option value="">Não selecionada</option>' + qzSettings.printers.map(printer =>
+                `<option value="${esc(printer.id)}" ${printer.id === selected ? 'selected' : ''}>${esc(printer.name)}</option>`
+            ).join('');
+        }
+
+        function renderConfiguredPrinters() {
+            const list = $('qz-printer-list');
+            if (!list) return;
+            list.innerHTML = qzSettings.printers.map(printer => `
+                <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1.5fr)_minmax(110px,0.7fr)_minmax(130px,0.8fr)_minmax(130px,0.8fr)_auto] gap-2 items-end rounded-lg border border-dark-border bg-dark-bg p-3">
+                    <div class="text-xs font-semibold text-white pb-2">${esc(printer.name)}</div>
+                    <label class="text-[10px] text-gray-400">Colunas
+                        <select onchange="updateConfiguredPrinter('${esc(printer.id)}','columns',this.value)" class="mt-1 w-full bg-dark-card border border-dark-border rounded p-2 text-xs text-gray-200">
+                            ${[32, 42, 48].map(columns => `<option value="${columns}" ${Number(printer.columns) === columns ? 'selected' : ''}>${columns}</option>`).join('')}
+                        </select>
+                    </label>
+                    <label class="text-[10px] text-gray-400">Perfil
+                        <select onchange="updateConfiguredPrinter('${esc(printer.id)}','profile',this.value)" class="mt-1 w-full bg-dark-card border border-dark-border rounded p-2 text-xs text-gray-200">
+                            <option value="58mm" ${printer.profile === '58mm' ? 'selected' : ''}>Térmica 58 mm</option>
+                            <option value="80mm" ${printer.profile !== '58mm' ? 'selected' : ''}>Térmica 80 mm</option>
+                        </select>
+                    </label>
+                    <label class="text-[10px] text-gray-400">Codificação
+                        <select onchange="updateConfiguredPrinter('${esc(printer.id)}','encoding',this.value)" class="mt-1 w-full bg-dark-card border border-dark-border rounded p-2 text-xs text-gray-200">
+                            ${['UTF-8', 'CP860', 'CP850'].map(encoding => `<option ${printer.encoding === encoding ? 'selected' : ''}>${encoding}</option>`).join('')}
+                        </select>
+                    </label>
+                    <div class="flex gap-1">
+                        <button onclick="testConfiguredPrinter('${esc(printer.id)}')" title="Testar impressora" aria-label="Testar ${esc(printer.name)}" class="rounded border border-dark-border px-2 py-2 text-xs text-gold-400 hover:border-gold-500"><i data-lucide="printer" class="w-4 h-4"></i></button>
+                        <button onclick="removeConfiguredPrinter('${esc(printer.id)}')" title="Remover impressora" aria-label="Remover ${esc(printer.name)}" class="rounded border border-dark-border px-2 py-2 text-xs text-red-400 hover:border-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                </div>`).join('') || '<p class="text-xs text-gray-500">Nenhuma impressora configurada.</p>';
+            lucide.createIcons();
+        }
+
+        function renderPrintSectors() {
+            const list = $('qz-sector-list');
+            if (!list) return;
+            list.innerHTML = `<div class="grid grid-cols-[minmax(100px,0.7fr)_minmax(180px,1fr)_auto] gap-2 px-2 text-[10px] uppercase text-gray-500"><span>Setor</span><span>Impressora</span><span></span></div>` +
+                qzSettings.sectors.map(sector => `
+                    <div class="grid grid-cols-[minmax(100px,0.7fr)_minmax(180px,1fr)_auto] gap-2 items-center rounded-lg border border-dark-border bg-dark-bg px-3 py-2">
+                        <span class="text-xs font-semibold text-gray-200">${esc(sector.name)}</span>
+                        <select onchange="updatePrintSector('${esc(sector.id)}',this.value)" class="bg-dark-card border border-dark-border rounded p-2 text-xs text-gray-200">${printerOptions(sector.printerId)}</select>
+                        ${['general', 'kitchen'].includes(sector.id) ? '<span></span>' : `<button onclick="removePrintSector('${esc(sector.id)}')" aria-label="Remover setor ${esc(sector.name)}" class="text-xs text-red-400">Remover</button>`}
+                    </div>`).join('');
+        }
+
+        function renderProductCategoryRouting() {
+            const container = $('qz-category-routing');
+            if (!container) return;
+            const categories = ['Pizzas', 'Pizzas Doces', ...Object.keys(S.menu.cats)];
+            container.innerHTML = categories.map(category => `
+                <label class="flex items-center justify-between gap-2 rounded-lg border border-dark-border bg-dark-bg p-2 text-xs text-gray-300">
+                    <span>${esc(category)}</span>
+                    <select onchange="updateCategorySector('${esc(category)}',this.value)" class="max-w-40 bg-dark-card border border-dark-border rounded p-1.5 text-xs text-gray-200">
+                        ${qzSettings.sectors.filter(sector => sector.id !== 'general').map(sector => `<option value="${esc(sector.id)}" ${(qzSettings.categorySectors[category] || 'kitchen') === sector.id ? 'selected' : ''}>${esc(sector.name)}</option>`).join('')}
+                    </select>
+                </label>`).join('');
+        }
+
+        function renderPrintCopies() {
+            const container = $('qz-copy-settings');
+            if (!container) return;
+            const renderTable = (title, key, withPrinter) => `
+                <div class="overflow-x-auto rounded-lg border border-dark-border">
+                    <div class="bg-dark-bg p-3 text-xs font-bold text-white">${title}</div>
+                    <table class="w-full text-left text-xs">
+                        <thead class="text-[10px] text-gray-500"><tr><th class="p-2">Tipo de pedido</th><th class="p-2">Qtd. vias</th>${withPrinter ? '<th class="p-2">Impressora</th>' : ''}</tr></thead>
+                        <tbody>${PRINT_ORDER_TYPES.map(type => `<tr class="border-t border-dark-border">
+                            <td class="p-2 text-gray-300">${type.label}</td>
+                            <td class="p-2"><select onchange="updateCopySetting('${key}','${type.id}',this.value)" class="bg-dark-bg border border-dark-border rounded p-1.5 text-xs text-gray-200">${Array.from({ length: 6 }, (_, index) => index).map(count => `<option value="${count}" ${Number(qzSettings[key][type.id]) === count ? 'selected' : ''}>${count}</option>`).join('')}</select></td>
+                            ${withPrinter ? `<td class="p-2"><select onchange="updateStandardPrinter('${type.id}',this.value)" class="max-w-40 bg-dark-bg border border-dark-border rounded p-1.5 text-xs text-gray-200">${printerOptions(qzSettings.standardPrinters[type.id])}</select></td>` : ''}
+                        </tr>`).join('')}</tbody>
+                    </table>
+                </div>`;
+            container.innerHTML = renderTable('Vias padrão (geral)', 'standardCopies', true) + renderTable('Vias de produção (cozinha)', 'productionCopies', false);
+        }
+
+        function renderPrintOptions() {
+            const container = $('qz-general-settings');
+            if (!container) return;
+            const options = [
+                ['showItemNumber', 'Mostrar número do item na impressão'],
+                ['showAddonPrice', 'Mostrar preço dos complementos'],
+                ['showAddonName', 'Mostrar nome dos complementos'],
+                ['largeProductionFont', 'Usar fonte maior na via de produção'],
+                ['multiplyOptions', 'Multiplicar complementos pela quantidade do produto'],
+                ['printCancellation', 'Imprimir comprovante de cancelamento'],
+                ['printQrCode', 'Imprimir QR Code nas vias padrão']
+            ];
+            container.innerHTML = options.map(([key, label]) => `
+                <label class="flex items-center justify-between gap-3 rounded-lg border border-dark-border bg-dark-bg p-3 text-xs text-gray-300">
+                    <span>${label}</span>
+                    <input type="checkbox" ${qzSettings.options[key] ? 'checked' : ''} onchange="updatePrintOption('${key}',this.checked)">
+                </label>`).join('');
+        }
+
+        function saveQzSettings() {
+            const enabled = $('qz-enabled');
+            if (enabled) qzSettings.enabled = enabled.checked;
+            const automatic = $('qz-automatic');
+            if (automatic) qzSettings.automatic = automatic.checked;
+            qzSettings.standardMessage = $('qz-standard-message')?.value || '';
+            qzSettings.tableMessage = $('qz-table-message')?.value || '';
+            qzSettings.standardQr = $('qz-standard-qr')?.value || '';
+            qzSettings.tableQr = $('qz-table-qr')?.value || '';
+            const kitchen = qzSettings.sectors.find(sector => sector.id === 'kitchen');
+            const general = qzSettings.sectors.find(sector => sector.id === 'general');
+            qzSettings.kitchenPrinter = kitchen?.printerId || '';
+            qzSettings.cashierPrinter = general?.printerId || '';
+            try {
+                localStorage.setItem(QZ_SETTINGS_KEY, JSON.stringify(qzSettings));
+            } catch (error) {
+                console.error('Não foi possível salvar as configurações do QZ Tray:', error);
+                setQzStatus('Não foi possível salvar as configurações.', true);
+                toast('Erro ao salvar as configurações de impressão.');
+            }
+        }
+
+        function addConfiguredPrinter() {
+            const name = $('qz-printer-add-select').value;
+            if (!name) return toast('Selecione uma impressora encontrada pelo QZ Tray.');
+            if (!qzSettings.printers.some(printer => printer.name === name)) {
+                qzSettings.printers.push({ id: name, name, columns: 42, profile: '80mm', encoding: 'UTF-8' });
+                saveQzSettings();
+                renderQzSettings();
+                toast(`Impressora ${name} adicionada.`);
+            }
+        }
+
+        function updateConfiguredPrinter(id, property, value) {
+            const printer = qzSettings.printers.find(item => item.id === id);
+            if (!printer) return toast('Impressora não encontrada nas configurações.');
+            printer[property] = property === 'columns' ? Number(value) : value;
+            saveQzSettings();
+            renderQzSettings();
+        }
+
+        function removeConfiguredPrinter(id) {
+            qzSettings.printers = qzSettings.printers.filter(printer => printer.id !== id);
+            qzSettings.sectors.forEach(sector => { if (sector.printerId === id) sector.printerId = ''; });
+            Object.keys(qzSettings.standardPrinters).forEach(type => { if (qzSettings.standardPrinters[type] === id) qzSettings.standardPrinters[type] = ''; });
+            saveQzSettings();
+            renderQzSettings();
+        }
+
+        function updatePrintSector(id, printerId) {
+            const sector = qzSettings.sectors.find(item => item.id === id);
+            if (!sector) return toast('Setor de impressão não encontrado.');
+            sector.printerId = printerId;
+            saveQzSettings();
+        }
+
+        function addPrintSector() {
+            const name = prompt('Nome do novo setor de produção:');
+            if (!name || !name.trim()) return;
+            const normalized = name.trim();
+            if (qzSettings.sectors.some(sector => sector.name.toLowerCase() === normalized.toLowerCase())) {
+                return toast('Já existe um setor com esse nome.');
+            }
+            qzSettings.sectors.push({ id: `sector-${Date.now()}`, name: normalized, printerId: '' });
+            saveQzSettings();
+            renderQzSettings();
+        }
+
+        function removePrintSector(id) {
+            qzSettings.sectors = qzSettings.sectors.filter(sector => sector.id !== id);
+            Object.keys(qzSettings.categorySectors).forEach(category => {
+                if (qzSettings.categorySectors[category] === id) delete qzSettings.categorySectors[category];
+            });
+            saveQzSettings();
+            renderQzSettings();
+        }
+
+        function updateCategorySector(category, sectorId) {
+            if (!qzSettings.sectors.some(sector => sector.id === sectorId)) return toast('Setor de produção não encontrado.');
+            qzSettings.categorySectors[category] = sectorId;
+            saveQzSettings();
+        }
+
+        function updateCopySetting(key, type, value) {
+            qzSettings[key][type] = Number(value);
+            saveQzSettings();
+        }
+
+        function updateStandardPrinter(type, printerId) {
+            qzSettings.standardPrinters[type] = printerId;
+            saveQzSettings();
+        }
+
+        function updatePrintOption(key, value) {
+            qzSettings.options[key] = Boolean(value);
+            saveQzSettings();
+        }
+
+        function printOrderType(order) {
+            if (order.type === 'DELIVERY') return 'DELIVERY';
+            if (order.type === 'MESA') return 'MESA';
+            return order.serviceType === 'RETIRADA' ? 'RETIRADA' : 'BALCAO';
+        }
+
+        function printTarget(type, order) {
+            if (type === 'kitchen') {
+                return qzSettings.sectors.find(sector => sector.id === order.printSectorId)?.printerId ||
+                    qzSettings.sectors.find(sector => sector.id === 'kitchen')?.printerId ||
+                    qzSettings.kitchenPrinter;
+            }
+            const orderType = printOrderType(order);
+            return qzSettings.standardPrinters[orderType] ||
+                qzSettings.sectors.find(sector => sector.id === 'general')?.printerId ||
+                qzSettings.cashierPrinter;
+        }
+
+        function printCopyCount(type, order) {
+            const copies = type === 'kitchen' ? qzSettings.productionCopies : qzSettings.standardCopies;
+            return Math.max(0, Math.min(5, Number(copies[printOrderType(order)]) || 0));
+        }
+
+        function productionPrintBatches(order) {
+            const batches = new Map();
+            (order.items || []).forEach(item => {
+                const configuredSectorId = qzSettings.categorySectors[item.category];
+                const sectorId = qzSettings.sectors.some(sector => sector.id === configuredSectorId && sector.id !== 'general')
+                    ? configuredSectorId
+                    : 'kitchen';
+                if (!batches.has(sectorId)) batches.set(sectorId, []);
+                batches.get(sectorId).push(item);
+            });
+            return [...batches].map(([sectorId, items]) => ({
+                ...order,
+                printSectorId: sectorId,
+                items
+            }));
+        }
+
+        async function connectQzTray(forceReconnect = false) {
+            if (typeof qz === 'undefined') {
+                setQzStatus('Biblioteca QZ Tray indisponível. Verifique a conexão com a internet.', true);
+                return toast('Não foi possível carregar a biblioteca do QZ Tray.');
+            }
+            qzReconnectPending = true;
+            updateQzConnectionIndicator();
+            try {
+                if (forceReconnect && qz.websocket.isActive()) await qz.websocket.disconnect();
+                if (!qz.websocket.isActive()) await qz.websocket.connect();
+                const printers = await qz.printers.find();
+                renderQzSettings(Array.isArray(printers) ? printers : []);
+                if (!printers.length) throw new Error('QZ Tray conectado, mas nenhuma impressora foi encontrada.');
+                setQzStatus(`${printers.length} impressora(s) encontrada(s).`);
+                toast('QZ Tray conectado. Selecione as impressoras da cozinha e do caixa.');
+            } catch (error) {
+                console.error('Falha ao conectar ao QZ Tray:', error);
+                setQzStatus(`Falha na conexão: ${error.message}`, true);
+                toast(`Não foi possível conectar ao QZ Tray: ${error.message}`);
+            } finally {
+                qzReconnectPending = false;
+                updateQzConnectionIndicator();
+            }
+        }
+
+        async function reconnectQzTray() {
+            const button = $('qz-reconnect-button');
+            button.disabled = true;
+            button.classList.add('opacity-60', 'cursor-wait');
+            try {
+                await connectQzTray(true);
+            } finally {
+                button.disabled = false;
+                button.classList.remove('opacity-60', 'cursor-wait');
+            }
+        }
+
+        async function ensureQzConnected() {
+            if (typeof qz === 'undefined') throw new Error('Biblioteca QZ Tray indisponível.');
+            if (!qz.websocket.isActive()) {
+                qzReconnectPending = true;
+                updateQzConnectionIndicator();
+                try {
+                    await qz.websocket.connect();
+                } finally {
+                    qzReconnectPending = false;
+                    updateQzConnectionIndicator();
+                }
+            }
+        }
+
+        async function sendQzPrint(printer, markup) {
+            if (!printer) throw new Error('Selecione uma impressora para cada via antes de ativar o QZ Tray.');
+            const printerSettings = qzSettings.printers.find(item => item.id === printer);
+            const profile = printerSettings?.profile || '80mm';
+            const paper = profile === '58mm' ? '58mm' : '80mm';
+            const width = profile === '58mm' ? '48mm' : '72mm';
+            const columns = Number(printerSettings?.columns) || (profile === '58mm' ? 32 : 42);
+            const fontSize = (12 * 42 / columns).toFixed(1);
+            const config = qz.configs.create(printer, { margins: 0, orientation: 'portrait', encoding: printerSettings?.encoding || 'UTF-8' });
+            const document = `<html><head><meta charset="utf-8"><style>@page{size:${paper} auto;margin:0}body{width:${width};margin:0 auto;padding:2mm 0;font:${fontSize}px/1.3 Arial,Helvetica,sans-serif;color:#000;background:#fff}.tk-c{text-align:center}.tk-b{font-weight:700}.tk-sm{font-size:10px}.tk-brand{font-size:20px;font-weight:900;letter-spacing:1px}.tk-num{font-size:34px;font-weight:900;line-height:1.1}.tk-inv{background:#000;color:#fff;font-weight:900;font-size:18px;padding:3px 0;margin:4px 0;text-align:center}.tk-hr{border-top:1px dashed #000;margin:5px 0}.tk-hr2{border-top:2px solid #000;margin:5px 0}.tk-row{display:flex;justify-content:space-between;gap:6px}.tk-item{font-size:15px;font-weight:900;margin-top:3px}.tk-item-prod{font-size:19px}.tk-det{padding-left:10px;font-size:12px;font-weight:600}.tk-obs{margin:2px 0 0 10px;border:1.5px solid #000;padding:1px 4px;font-weight:900;font-size:12px}.tk-tot{font-size:18px;font-weight:900}</style></head><body>${markup}${'</bo' + 'dy></ht' + 'ml>'}`;
+            return qz.print(config, [{ type: 'html', format: 'plain', data: document }]);
+        }
+
         normalizeCaixaState();
 
         function initApp() {
             try { const su = JSON.parse(localStorage.getItem('gp_users')); if (su && su.length) users = su; } catch (e) {}
             $('o-mesa').innerHTML = Array.from({ length: TABLE_COUNT }, (_, i) => `<option value="${i + 1}">Mesa ${i + 1}</option>`).join('');
             $('o-pay').innerHTML = ['Pagar depois', ...PAYS].map(p => `<option>${p}</option>`).join('');
-            onTypeChange(); renderMenu(); renderKDS(); renderCardapioAdmin();
+            renderQzSettings(); updateQzConnectionIndicator(); onTypeChange(); renderMenu(); renderKDS(); renderCardapioAdmin();
+            setInterval(updateQzConnectionIndicator, 2000);
+            document.addEventListener('click', event => {
+                const container = $('qz-connection-button').parentElement;
+                if (!container.contains(event.target)) {
+                    $('qz-connection-menu').classList.add('hidden');
+                    $('qz-connection-button').setAttribute('aria-expanded', 'false');
+                }
+            });
             setInterval(renderKDS, 30000);
         }
         function onTypeChange() {
@@ -1426,7 +2140,7 @@ R$ 130,00
             const i = menuItems()[idx];
             if (i.pz !== undefined) return openPizza(i.f, i.pz);
             if (!i.p) return toast('Item sem preço. Defina em Cardápio / Preços.');
-            addCart({ name: i.n, qty: 1, price: i.p, det: i.d && i.c !== 'Massas' && i.c !== 'Bebidas' ? [] : [], obs: '' });
+            addCart({ name: i.n, category: i.c, qty: 1, price: i.p, det: i.d && i.c !== 'Massas' && i.c !== 'Bebidas' ? [] : [], obs: '' });
         }
 
         // ---------- Montar pizza ----------
@@ -1468,13 +2182,13 @@ R$ 130,00
         function addPizza() {
             if (!pm.fl.length) return toast('Escolha pelo menos 1 sabor');
             if (!pmPrice() || !(pm.d ? S.menu.pd : S.menu.pt)[pm.s]) return toast('Tamanho sem preço. Defina em Cardápio / Preços.');
-            addCart({ name: `Pizza ${SIZES[pm.s]}${pm.d ? ' Doce' : ''}`, qty: pm.q, price: pmPrice(), det: [...pm.fl, ...pm.ac.map(i => '+ ' + S.menu.ac[i][0])], obs: pm.o.trim() });
+            addCart({ name: `Pizza ${SIZES[pm.s]}${pm.d ? ' Doce' : ''}`, category: pm.d ? 'Pizzas Doces' : 'Pizzas', qty: pm.q, price: pmPrice(), det: [...pm.fl, ...pm.ac.map(i => '+ ' + S.menu.ac[i][0])], obs: pm.o.trim() });
             closePizza();
         }
 
         // ---------- Carrinho ----------
         function addCart(x) {
-            const f = cart.find(c => c.name === x.name && !c.det.length && !x.det.length && c.obs === x.obs && c.price === x.price);
+            const f = cart.find(c => c.name === x.name && c.category === x.category && !c.det.length && !x.det.length && c.obs === x.obs && c.price === x.price);
             f ? f.qty += x.qty : cart.push(x); renderCart();
         }
         function qty(i, d) { cart[i].qty += d; if (cart[i].qty < 1) cart.splice(i, 1); renderCart(); }
@@ -1490,7 +2204,8 @@ R$ 130,00
         }
 
         // ---------- Pedidos ----------
-        const where = o => o.type === 'MESA' ? 'Mesa ' + o.mesa : o.type === 'DELIVERY' ? 'Delivery' : 'Balcão';
+        const where = o => o.type === 'MESA' ? 'Mesa ' + o.mesa : o.type === 'DELIVERY' ? 'Delivery' : o.serviceType === 'RETIRADA' ? 'Retirada' : 'Balcão';
+        const isOrderOpen = order => !order.paid && order.status !== 'CANCELADO';
         function finalize(o, pay) {
             if (pay && pay !== 'Pagar depois' && !caixaAberto()) {
                 toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
@@ -1513,18 +2228,24 @@ R$ 130,00
             S.caixa.movs.push({ t: Date.now(), type: 'Venda', desc: `Pedido Nº ${o.id} (${where(o)})`, pay: p, v: o.total, orderId: o.id, orderType: o.type, by: o.by || '' });
             return true;
         }
-        function createOrder() {
+        async function createOrder() {
+            await syncSharedState();
             if (!cart.length) return toast('Adicione itens ao pedido');
+            if (!currentUser) return toast('Faça login antes de lançar um pedido.');
             const type = $('o-type').value;
             const payment = $('o-pay').value;
             if (payment !== 'Pagar depois' && !caixaAberto()) return toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
-            const o = { type, mesa: type === 'MESA' ? +$('o-mesa').value : null, cli: $('o-cli').value.trim(), tel: $('o-tel').value.trim(), end: $('o-end').value.trim(), bairro: $('o-bairro').value.trim(), items: cart.map(x => ({ ...x })), taxa: cartTaxa(), svc: cartSvc(), svcPct: S.menu.svc, by: currentUser.name };
+            const o = { type: type === 'RETIRADA' ? 'BALCAO' : type, serviceType: type === 'RETIRADA' ? 'RETIRADA' : '', printRequested: $('o-print').checked, mesa: type === 'MESA' ? +$('o-mesa').value : null, cli: $('o-cli').value.trim(), tel: $('o-tel').value.trim(), end: $('o-end').value.trim(), bairro: $('o-bairro').value.trim(), items: cart.map(x => ({ ...x })), taxa: cartTaxa(), svc: cartSvc(), svcPct: S.menu.svc, by: currentUser.name, byId: currentUser.id };
             if (type === 'DELIVERY' && (!o.cli || !o.end)) return toast('Delivery: informe nome e endereço');
             if (type === 'DELIVERY' && cliLoaded && !$('o-conf').checked) return toast('Confirme o endereço com o cliente');
-            finalize(o, $('o-pay').value);
+            if (!finalize(o, payment)) return;
             cart = []; ['o-cli', 'o-tel', 'o-end', 'o-bairro', 'o-taxa', 'o-busca'].forEach(id => $(id).value = ''); cliLoaded = false; $('o-conf').checked = false; $('o-conf-box').classList.add('hidden'); $('o-busca-res').classList.add('hidden'); renderCart();
             toast(`Pedido #${o.id} enviado para a cozinha`);
-            if ($('o-print').checked) printThermal('kitchen', o.id);
+            if (type === 'MESA') {
+                selectedMesa = o.mesa;
+                switchTab('mesas');
+            }
+            if ($('o-print').checked && qzSettings.enabled && qzSettings.automatic) printBothThermal(o);
         }
         function askPay() { const r = prompt('Forma de pagamento:\n1 - Dinheiro\n2 - PIX\n3 - Cartão de Crédito\n4 - Cartão de Débito'); return PAYS[(+r) - 1]; }
         function receive(id) {
@@ -1533,7 +2254,13 @@ R$ 130,00
             const p = (o.payPref && confirm(`Receber ${money(o.total)} em ${o.payPref}?\nOK = confirmar | Cancelar = escolher outra forma`)) ? o.payPref : askPay();
             if (!p || !payOrder(o, p)) return; renderAll();
         }
-        function cancelOrder(id) { const o = S.orders.find(x => x.id === id); if (o && !o.paid && confirm(`Cancelar pedido #${id}?`)) { o.status = 'CANCELADO'; renderAll(); } }
+        function cancelOrder(id) {
+            const order = S.orders.find(item => item.id === id);
+            if (!order || order.paid || !confirm(`Cancelar pedido #${id}?`)) return;
+            order.status = 'CANCELADO';
+            renderAll();
+            if (qzSettings.options.printCancellation) printThermal('cancel', id);
+        }
         function kdsDone(id) { const o = S.orders.find(x => x.id === id); if (o) { o.status = 'PRONTO'; renderAll(); } }
         function stLabel(o) {
             if (o.status === 'CANCELADO') return ['Cancelado', 'red'];
@@ -1542,7 +2269,14 @@ R$ 130,00
             if (o.status === 'PENDENTE') return ['Em preparação', 'gold'];
             return ['Pronto • a receber', 'sky'];
         }
-        function renderAll() { renderOrdersList(); renderKDS(); renderMesasGrid(); renderCaixaLedger(); renderCaixaHistory(); save(); }
+        function renderAll(persist = true) {
+            renderOrdersList();
+            renderKDS();
+            renderMesasGrid();
+            renderCaixaLedger();
+            renderCaixaHistory();
+            if (persist) save();
+        }
 
         function renderOrdersList() {
             $('clear-order-history').classList.toggle('hidden', !canClearOrderHistory());
@@ -1574,13 +2308,13 @@ R$ 130,00
                         </div>
                     </div>
                 </td></tr>`;
-                return `<tr class="hover:bg-dark-hover"><td class="p-3 font-bold text-gold-500">#${o.id}</td><td class="p-3 font-medium text-white">${esc(o.type === 'DELIVERY' ? o.cli : where(o))}<div class="text-[10px] text-gray-500">${esc(o.by || '')}</div></td><td class="p-3 text-gray-400">${esc(o.bairro || '-')}</td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${c}-500/10 text-${c}-400">${l}</span>${o.paid ? `<div class="text-[10px] text-gray-500 mt-1">${esc(o.pay)}</div>` : ''}</td><td class="p-3 font-bold text-white">${money(o.total)}</td><td class="p-3 text-right space-x-1 whitespace-nowrap"><button onclick="toggleOrderDetails(${o.id})" class="bg-dark-bg border border-dark-border text-xs px-2 py-1 rounded">${expandedOrderId === o.id ? 'Ocultar' : 'Ver pedido'}</button><button onclick="printThermal('kitchen',${o.id})" class="bg-dark-bg border border-dark-border text-xs px-2 py-1 rounded">Cozinha</button><button onclick="printThermal('caixa',${o.id})" class="bg-dark-bg border border-dark-border text-xs px-2 py-1 rounded">Caixa</button>${live && !o.paid ? `<button onclick="receive(${o.id})" class="bg-gold-500 text-black text-xs font-bold px-2 py-1 rounded">Receber</button><button onclick="cancelOrder(${o.id})" class="text-red-400 text-xs px-1">✕</button>` : ''}</td></tr>${expandedOrderId === o.id ? details : ''}`;
+                return `<tr class="hover:bg-dark-hover"><td class="p-3 font-bold text-gold-500">#${o.id}</td><td class="p-3 font-medium text-white">${esc(o.type === 'DELIVERY' ? o.cli : where(o))}<div class="text-[10px] text-gray-500">${esc(o.by || '')}</div></td><td class="p-3 text-gray-400">${esc(o.bairro || '-')}</td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${c}-500/10 text-${c}-400">${l}</span>${o.paid ? `<div class="text-[10px] text-gray-500 mt-1">${esc(o.pay)}</div>` : ''}</td><td class="p-3 font-bold text-white">${money(o.total)}</td><td class="p-3 text-right whitespace-nowrap"><div class="inline-flex items-center gap-1"><button onclick="toggleOrderDetails(${o.id})" aria-label="${expandedOrderId === o.id ? 'Ocultar' : 'Ver'} pedido ${o.id}" title="${expandedOrderId === o.id ? 'Ocultar pedido' : 'Ver pedido'}" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="${expandedOrderId === o.id ? 'chevron-up' : 'list'}" class="w-4 h-4"></i></button><button onclick="printThermal('kitchen',${o.id})" aria-label="Reimprimir comanda da cozinha do pedido ${o.id}" title="Reimprimir cozinha" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="chef-hat" class="w-4 h-4"></i></button><button onclick="printThermal('caixa',${o.id})" aria-label="Reimprimir comanda geral do pedido ${o.id}" title="Reimprimir comanda geral" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="printer" class="w-4 h-4"></i></button>${live && !o.paid ? `<button onclick="receive(${o.id})" class="bg-gold-500 text-black text-xs font-bold px-2 py-1 rounded">Receber</button><button onclick="cancelOrder(${o.id})" aria-label="Cancelar pedido ${o.id}" title="Cancelar pedido" class="text-red-400 text-xs px-1">✕</button>` : ''}</div></td></tr>${expandedOrderId === o.id ? details : ''}`;
             }).join('') || '<tr><td colspan="6" class="p-6 text-center text-gray-500">Nenhum pedido ainda</td></tr>';
+            lucide.createIcons();
         }
         function limparHistoricoPedidos() {
             if (!canClearOrderHistory()) return toast('Apenas administrador, gerente ou caixa podem limpar o histórico de pedidos.');
-            const isActiveOrder = order => order.status !== 'CANCELADO' && (!order.paid || order.status === 'PENDENTE');
-            const historicalOrders = S.orders.filter(order => !isActiveOrder(order));
+            const historicalOrders = S.orders.filter(order => !isOrderOpen(order));
             if (!historicalOrders.length) return toast('Não há pedidos concluídos ou cancelados para limpar.');
             if (!confirm(`Serão removidos ${historicalOrders.length} pedido(s) concluído(s) ou cancelado(s). Pedidos em preparação ou aguardando pagamento serão mantidos. Deseja continuar?`)) return;
 
@@ -1622,12 +2356,34 @@ R$ 130,00
 
         // ---------- Mesas ----------
         function renderMesasGrid() {
-            let h = '';
-            for (let i = 1; i <= TABLE_COUNT; i++) {
-                const os = S.orders.filter(o => o.type === 'MESA' && o.mesa === i && !o.paid && o.status !== 'CANCELADO'), occ = os.length, tot = os.reduce((a, o) => a + o.total, 0);
-                h += `<button type="button" onclick="mesaClick(${i})" aria-pressed="${selectedMesa === i}" class="p-3 rounded-xl border ${occ ? 'bg-gold-500/15 border-gold-500 text-gold-500' : 'bg-dark-card border-dark-border text-gray-400'} ${selectedMesa === i ? 'ring-2 ring-gold-400' : ''} flex flex-col items-center justify-center cursor-pointer"><span class="text-[10px] uppercase font-bold">Mesa</span><span class="text-lg font-bold text-white">${String(i).padStart(2, '0')}</span><span class="text-[9px] mt-1">${occ ? 'ABERTA<br>' + money(tot) : 'Livre'}</span></button>`;
-            }
-            $('mesas-grid').innerHTML = h;
+            const openTables = Array.from({ length: TABLE_COUNT }, (_, index) => index + 1).filter(number => mesaOrders(number).length);
+            const openOrders = S.orders.filter(order => order.type === 'MESA' && isOrderOpen(order));
+            const openTotal = openOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+            $('mesas-summary').innerHTML = `
+                <div class="bg-dark-bg border border-dark-border rounded-lg px-3 py-2"><div class="text-[10px] uppercase text-gray-500">Mesas abertas</div><div class="text-lg font-bold text-gold-400">${openTables.length}<span class="text-xs font-normal text-gray-500"> / ${TABLE_COUNT}</span></div></div>
+                <div class="bg-dark-bg border border-dark-border rounded-lg px-3 py-2"><div class="text-[10px] uppercase text-gray-500">Pedidos em aberto</div><div class="text-lg font-bold text-white">${openOrders.length}</div></div>
+                <div class="bg-dark-bg border border-dark-border rounded-lg px-3 py-2"><div class="text-[10px] uppercase text-gray-500">Total das mesas</div><div class="text-lg font-bold text-emerald-400">${money(openTotal)}</div></div>`;
+
+            const query = digits($('mesas-search').value);
+            const filter = $('mesas-filter').value;
+            const tables = Array.from({ length: TABLE_COUNT }, (_, index) => index + 1).filter(number => {
+                const occupied = mesaOrders(number).length > 0;
+                return (!query || String(number).includes(query)) &&
+                    (filter === 'TODAS' || (filter === 'ABERTAS' && occupied) || (filter === 'LIVRES' && !occupied));
+            });
+            $('mesas-grid').innerHTML = tables.map(number => {
+                const orders = mesaOrders(number);
+                const occupied = orders.length > 0;
+                const total = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+                const attendants = [...new Set(orders.map(order => order.by).filter(Boolean))];
+                const attendantLabel = attendants.length ? attendants.join(', ') : '';
+                return `<button type="button" onclick="mesaClick(${number})" aria-label="Mesa ${number}, ${occupied ? `aberta, ${orders.length} pedido(s), ${money(total)}` : 'livre'}" aria-pressed="${selectedMesa === number}" class="min-h-24 p-3 rounded-xl border ${occupied ? 'bg-gold-500/10 border-gold-500/60' : 'bg-dark-card border-dark-border'} ${selectedMesa === number ? 'ring-2 ring-gold-400' : ''} flex flex-col items-center justify-center text-center cursor-pointer hover:border-gold-400 transition">
+                    <span class="text-[10px] uppercase font-bold ${occupied ? 'text-gold-400' : 'text-gray-500'}">MESA</span>
+                    <span class="text-xl font-bold text-white">${String(number).padStart(2, '0')}</span>
+                    <span class="text-[10px] mt-1 font-semibold ${occupied ? 'text-gold-300' : 'text-emerald-400'}">${occupied ? `ABERTA • ${money(total)}` : 'LIVRE'}</span>
+                    ${occupied ? `<span class="text-[9px] text-gray-400 mt-1">${orders.length} pedido(s)${attendantLabel ? ` • ${esc(attendantLabel)}` : ''}</span>` : ''}
+                </button>`;
+            }).join('') || '<p class="col-span-full p-6 text-center text-xs text-gray-500">Nenhuma mesa corresponde ao filtro.</p>';
             renderMesaDetails();
         }
         function mesaClick(n) {
@@ -1635,7 +2391,7 @@ R$ 130,00
             renderMesasGrid();
         }
         function mesaOrders(n) {
-            return S.orders.filter(o => o.type === 'MESA' && o.mesa === n && !o.paid && o.status !== 'CANCELADO');
+            return S.orders.filter(o => o.type === 'MESA' && Number(o.mesa) === n && isOrderOpen(o));
         }
         function renderMesaDetails() {
             const panel = $('mesa-details');
@@ -1660,7 +2416,7 @@ R$ 130,00
                 </div>`).join('');
 
             panel.innerHTML = `<div class="flex items-center justify-between"><h3 class="font-bold text-sm text-gold-500">MESA ${String(selectedMesa).padStart(2, '0')}</h3><span class="text-[10px] ${orders.length ? 'text-gold-400' : 'text-emerald-400'}">${orders.length ? 'EM ABERTO' : 'LIVRE'}</span></div>
-                ${orders.length ? `<div class="max-h-[55vh] overflow-y-auto pr-1 space-y-3">${items}</div><div class="border-t border-dark-border pt-3 flex justify-between font-bold text-white"><span>TOTAL DA CONTA</span><span class="text-gold-400">${money(total)}</span></div>
+                ${orders.length ? `<div class="mesa-orders-list max-h-[55vh] overflow-y-auto pr-1 space-y-3">${items}</div><div class="border-t border-dark-border pt-3 flex justify-between font-bold text-white"><span>TOTAL DA CONTA</span><span class="text-gold-400">${money(total)}</span></div>
                 <button onclick="fecharMesa(${selectedMesa})" class="w-full bg-emerald-500 hover:bg-emerald-600 text-black text-xs font-bold py-2.5 rounded-lg transition">FECHAR MESA / RECEBER CONTA</button>` : '<p class="text-xs text-gray-400">Esta mesa não possui pedidos em aberto.</p>'}
                 <button onclick="adicionarItensMesa(${selectedMesa})" class="w-full bg-dark-bg border border-dark-border hover:border-gold-500 text-gray-200 text-xs font-semibold py-2.5 rounded-lg transition">ADICIONAR ITENS À MESA</button>`;
         }
@@ -1839,7 +2595,7 @@ R$ 130,00
         }
         function fecharCaixa() {
             if (!caixaAberto()) return toast('Este caixa já está fechado.');
-            const abertos = S.orders.filter(o => !o.paid && o.status !== 'CANCELADO').length;
+            const abertos = S.orders.filter(isOrderOpen).length;
             if (abertos && !confirm(`Atenção: ${abertos} pedido(s) ainda não recebido(s).\n\nDeseja continuar com o fechamento do caixa?`)) return;
             $('close-cash-expected').textContent = `Valor em caixa esperado: ${money(caixaResumo(S.caixa).drawerCash)}`;
             $('close-cash-withdrawal').value = '0';
@@ -1913,6 +2669,7 @@ R$ 130,00
             closed.nextInitial = +nextInitial.toFixed(2);
             closed.summary = summary;
             S.caixaHistory.push(closed);
+            S.orders = S.orders.filter(isOrderOpen);
             selectedCashHistoryId = String(closed.id);
             $('caixa-history-date').value = caixaDateKey(closedAt);
             S.caixa = {
@@ -1947,25 +2704,119 @@ R$ 130,00
         // ---------- Impressão térmica (Elgin i9 - 80mm) ----------
         const tkBrand = '<div class="tk-c tk-brand">GABRYELLE PRIME</div><div class="tk-c tk-sm">MUSIC &amp; GASTRONOMIA</div><div class="tk-hr2"></div>';
         const tkEnd = '<div class="tk-hr"></div><div style="height:10mm"></div>';
-        function printThermal(type, id) {
-            const o = S.orders.find(x => x.id === id); if (!o) return;
+        async function thermalMarkup(type, o) {
             const d = new Date(o.at), dt = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             const top = (t) => `${tkBrand}<div class="tk-c tk-b">${t}</div><div class="tk-c tk-sm">PEDIDO</div><div class="tk-c tk-num">#${o.id}</div><div class="tk-inv">${esc(where(o).toUpperCase())}</div><div class="tk-row tk-sm"><span>${dt}</span><span>${esc(o.by || '')}</span></div><div class="tk-hr"></div>`;
-            const det = x => x.det.map(t => `<div class="tk-det">${t.startsWith('+') ? '' : '› '}${esc(t)}</div>`).join('') + (x.obs ? `<div class="tk-obs">OBS: ${esc(x.obs)}</div>` : '');
+            const addonPrice = text => {
+                const addon = S.menu.ac.find(item => `+ ${item[0]}` === text);
+                return addon && qzSettings.options.showAddonPrice ? ` ${money(addon[1])}` : '';
+            };
+            const det = (x, index) => (x.det || []).map(text => {
+                const label = qzSettings.options.showAddonName ? esc(text) : (text.startsWith('+') ? '' : esc(text));
+                const multiplier = qzSettings.options.multiplyOptions && text.startsWith('+') ? `${Number(x.qty) || 1}x ` : '';
+                return label ? `<div class="tk-det">${multiplier}${text.startsWith('+') ? '' : '› '}${label}${addonPrice(text)}</div>` : '';
+            }).join('') + (x.obs ? `<div class="tk-obs">OBS: ${esc(x.obs)}</div>` : '');
+            const items = Array.isArray(o.items) ? o.items : [];
+            const renderItem = (item, index, production = false) => {
+                const itemName = `${qzSettings.options.showItemNumber ? `${index + 1}. ` : ''}${Number(item.qty) || 0}x ${esc(item.name || '')}`;
+                return `<div class="${production && qzSettings.options.largeProductionFont ? 'tk-item tk-item-prod' : 'tk-item'}">${itemName}</div>${det(item, index)}`;
+            };
             let h;
             if (type === 'kitchen') {
-                h = top('*** COZINHA ***') + o.items.map(x => `<div class="tk-item">${x.qty}x ${esc(x.name.toUpperCase())}</div>${det(x)}`).join('<div class="tk-hr"></div>')
-                  + `<div class="tk-hr2"></div><div class="tk-c tk-sm">Total de itens: ${o.items.reduce((a, x) => a + x.qty, 0)}</div>`;
+                h = top('*** COZINHA ***') + items.map((item, index) => renderItem({ ...item, name: String(item.name || '').toUpperCase() }, index, true)).join('<div class="tk-hr"></div>')
+                  + `<div class="tk-hr2"></div><div class="tk-c tk-sm">Total de itens: ${items.reduce((a, x) => a + (Number(x.qty) || 0), 0)}</div>`;
             } else {
                 const cli = o.type === 'DELIVERY' ? `<div class="tk-b">CLIENTE</div><div>${esc(o.cli)}</div><div>${esc(o.tel)}</div><div>${esc(o.end)}</div><div class="tk-b">Bairro: ${esc(o.bairro)}</div><div class="tk-hr"></div>` : '';
                 const pay = o.paid ? `PAGO • ${esc(o.pay)}` : (o.payPref ? `Pagar na entrega • ${esc(o.payPref)}` : 'A RECEBER');
-                h = top('CAIXA / ENTREGA') + cli
-                  + o.items.map(x => `<div class="tk-row tk-b"><span>${x.qty}x ${esc(x.name)}</span><span>${money(x.qty * x.price)}</span></div>${det(x)}`).join('<div style="height:4px"></div>')
+                h = top(type === 'cancel' ? 'COMPROVANTE DE CANCELAMENTO' : 'COMANDA GERAL') + cli
+                  + items.map((item, index) => `<div class="tk-row tk-b"><span>${qzSettings.options.showItemNumber ? `${index + 1}. ` : ''}${Number(item.qty) || 0}x ${esc(item.name || '')}</span><span>${money((Number(item.qty) || 0) * (Number(item.price) || 0))}</span></div>${det(item, index)}`).join('<div style="height:4px"></div>')
                   + '<div class="tk-hr"></div>'
                   + ((o.taxa || o.svc) ? `<div class="tk-row"><span>Subtotal</span><span>${money(o.sub)}</span></div>` : '') + (o.taxa ? `<div class="tk-row"><span>Taxa de entrega</span><span>${money(o.taxa)}</span></div>` : '') + (o.svc ? `<div class="tk-row"><span>Taxa de serviço (${o.svcPct || 10}%)</span><span>${money(o.svc)}</span></div>` : '')
-                  + `<div class="tk-hr2"></div><div class="tk-row tk-tot"><span>TOTAL</span><span>${money(o.total)}</span></div><div class="tk-hr2"></div><div class="tk-c tk-b">${pay}</div><div class="tk-hr"></div><div class="tk-c tk-sm">Obrigado pela preferência!</div>`;
+                  + `<div class="tk-hr2"></div><div class="tk-row tk-tot"><span>${type === 'cancel' ? 'VALOR CANCELADO' : 'TOTAL'}</span><span>${money(o.total)}</span></div><div class="tk-hr2"></div><div class="tk-c tk-b">${type === 'cancel' ? 'PEDIDO CANCELADO' : pay}</div>${qzSettings.standardMessage ? `<div class="tk-hr"></div><div class="tk-c tk-sm">${esc(o.type === 'MESA' && qzSettings.tableMessage ? qzSettings.tableMessage : qzSettings.standardMessage)}</div>` : '<div class="tk-hr"></div><div class="tk-c tk-sm">Obrigado pela preferência!</div>'}`;
             }
-            $('print-area').innerHTML = h + tkEnd; window.print();
+            const qrValue = type !== 'kitchen' && qzSettings.options.printQrCode
+                ? (o.type === 'MESA' ? qzSettings.tableQr || qzSettings.standardQr : qzSettings.standardQr)
+                : '';
+            let qrMarkup = '';
+            if (qrValue) {
+                if (!window.QRCode || typeof window.QRCode.toDataURL !== 'function') {
+                    throw new Error('Biblioteca de QR Code indisponível. Verifique a conexão.');
+                }
+                const qrImage = await window.QRCode.toDataURL(qrValue, { width: 120, margin: 1 });
+                qrMarkup = `<div class="tk-c"><img src="${qrImage}" alt="QR Code" style="width:28mm;height:28mm"><div class="tk-sm">${esc(qrValue)}</div></div>`;
+            }
+            return h + qrMarkup + tkEnd;
+        }
+        async function printThermal(type, id) {
+            const order = S.orders.find(item => String(item.id) === String(id));
+            if (!order) return toast('Pedido não encontrado para impressão.');
+            const copies = printCopyCount(type, order);
+            if (!copies) return toast('A quantidade de vias deste tipo de pedido está configurada como zero.');
+            try {
+                const jobs = type === 'kitchen' ? productionPrintBatches(order) : [order];
+                if (!jobs.length) return toast('O pedido não possui itens para impressão.');
+                if (qzSettings.enabled) {
+                    await ensureQzConnected();
+                    for (const job of jobs) {
+                        const printer = printTarget(type, job);
+                        if (!printer) {
+                            const sector = qzSettings.sectors.find(item => item.id === job.printSectorId);
+                            throw new Error(`Nenhuma impressora configurada para ${sector?.name || (type === 'kitchen' ? 'a cozinha' : 'o caixa')}.`);
+                        }
+                        const markup = await thermalMarkup(type, job);
+                        for (let copy = 0; copy < copies; copy++) await sendQzPrint(printer, markup);
+                    }
+                    setQzStatus(`Comanda ${type === 'kitchen' ? 'de produção' : 'geral'} enviada para impressão.`);
+                    return;
+                }
+                const markups = await Promise.all(jobs.map(job => thermalMarkup(type, job)));
+                $('print-area').innerHTML = Array(copies).fill(markups.join('<div style="page-break-before:always"></div>')).join('<div style="page-break-before:always"></div>');
+                window.print();
+            } catch (error) {
+                console.error('Falha ao imprimir comanda:', error);
+                setQzStatus(`Falha na impressão: ${error.message}`, true);
+                toast(`Não foi possível imprimir a comanda: ${error.message}`);
+            }
+        }
+        async function printBothThermal(order) {
+            const productionCopies = printCopyCount('kitchen', order);
+            const standardCopies = printCopyCount('caixa', order);
+            if (!productionCopies && !standardCopies) return toast('Configure ao menos uma via de produção ou padrão para este tipo de pedido.');
+            if (qzSettings.enabled) {
+                await Promise.all([
+                    productionCopies ? printThermal('kitchen', order.id) : Promise.resolve(),
+                    standardCopies ? printThermal('caixa', order.id) : Promise.resolve()
+                ]);
+                return;
+            }
+            if (productionCopies) await printThermal('kitchen', order.id);
+            if (standardCopies) window.setTimeout(() => { printThermal('caixa', order.id); }, productionCopies ? 800 : 0);
+        }
+
+        async function testConfiguredPrinter(id) {
+            try {
+                await ensureQzConnected();
+                await sendQzPrint(id, `<div class="tk-c tk-brand">TESTE DE IMPRESSÃO</div><div class="tk-hr"></div><div>${esc(id)}</div><div class="tk-c tk-sm">${new Date().toLocaleString('pt-BR')}</div>${tkEnd}`);
+                toast(`Teste enviado para ${id}.`);
+            } catch (error) {
+                console.error('Falha no teste da impressora:', error);
+                toast(`Não foi possível testar a impressora: ${error.message}`);
+            }
+        }
+
+        async function testQzPrinters() {
+            const printerIds = [...new Set(qzSettings.sectors.map(sector => sector.printerId).filter(Boolean))];
+            if (!printerIds.length) return toast('Atribua pelo menos uma impressora a um setor antes de testar.');
+            try {
+                await ensureQzConnected();
+                const testMarkup = `<div class="tk-c tk-brand">TESTE DE IMPRESSÃO</div><div class="tk-hr"></div><div class="tk-c">Via: ${new Date().toLocaleString('pt-BR')}</div>`;
+                await Promise.all(printerIds.map(printer => sendQzPrint(printer, testMarkup)));
+                setQzStatus(`Teste enviado para ${printerIds.length} impressora(s).`);
+            } catch (error) {
+                console.error('Falha no teste de impressão QZ Tray:', error);
+                setQzStatus(`Falha no teste: ${error.message}`, true);
+                toast(`Não foi possível testar as impressoras: ${error.message}`);
+            }
         }
 
         // ---------- Clientes do delivery ----------
@@ -2065,10 +2916,11 @@ R$ 130,00
             const feeFromTotal = total > itemsTotal ? total - itemsTotal : 0;
             const feeFromSubtotal = total > sub ? total - sub : 0;
             const deliveryFee = feeFromTotal || feeFromSubtotal;
-            const o = { id: num && !S.orders.some(x => x.id === num) ? num : 0, type: 'DELIVERY', cli: g(/(?:👤|Cliente\s*:?)\s*\*?([^\n*]+)/i) || 'Cliente WhatsApp', tel: g(/📞\s*([^\n]+)/), end: addressParts.join(' · '), bairro: neighborhood || (address.includes(',') ? address.split(',').pop().trim() : ''), items, taxa: deliveryFee, by: currentUser.name,
+            const o = { id: num && !S.orders.some(x => x.id === num) ? num : 0, type: 'DELIVERY', cli: g(/(?:👤|Cliente\s*:?)\s*\*?([^\n*]+)/i) || 'Cliente WhatsApp', tel: g(/📞\s*([^\n]+)/), end: addressParts.join(' · '), bairro: neighborhood || (address.includes(',') ? address.split(',').pop().trim() : ''), items, taxa: deliveryFee, by: currentUser?.name || 'Importação WhatsApp', byId: currentUser?.id || null,
                 payPref: /pix/i.test(payment) ? 'PIX' : /dinheiro/i.test(payment) ? 'Dinheiro' : /cr[eé]dito/i.test(payment) ? 'Cartão de Crédito' : /d[eé]bito/i.test(payment) ? 'Cartão de Débito' : '' };
-            finalize(o, 'Pagar depois'); $('whatsapp-input').value = '';
-            printThermal('kitchen', o.id); setTimeout(() => printThermal('caixa', o.id), 800);
+            if (!finalize(o, 'Pagar depois')) return;
+            $('whatsapp-input').value = '';
+            if (qzSettings.automatic) printBothThermal(o);
             switchTab('pedidos');
         }
 
