@@ -183,7 +183,7 @@
                         <span id="qz-menu-indicator" class="w-2.5 h-2.5 rounded-full bg-red-500" aria-hidden="true"></span>
                         <span id="qz-connection-label">Agente de impressão desconectado</span>
                     </div>
-                    <p class="mt-2 text-[11px] text-gray-400">Se o agente demorar para responder, reconecte e atualize a lista de impressoras.</p>
+                    <p class="mt-2 text-[11px] text-gray-400">O status é compartilhado entre os dispositivos. A impressão é executada no computador conectado à impressora.</p>
                     <button id="qz-reconnect-button" type="button" onclick="reconnectQzTray()" class="mt-3 w-full flex items-center justify-center gap-2 rounded-lg bg-gold-500 px-3 py-2 text-xs font-bold text-black hover:bg-gold-600">
                         <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                         <span id="qz-reconnect-label">Reconectar e atualizar</span>
@@ -455,6 +455,18 @@
                     <h2 class="text-xl font-bold text-white">Cardápio & Preços</h2>
                     <p class="text-xs text-gray-400">Configure os preços normais e promocionais. Promoções são aplicadas automaticamente nos dias selecionados.</p>
                     <p id="cardapio-alert" class="text-xs text-amber-400 mt-2"></p>
+                </div>
+                <div class="bg-dark-card rounded-xl border border-dark-border p-4 space-y-3">
+                    <h3 class="font-bold text-sm text-gold-500">Adicionar prato ou bebida</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+                        <input id="menu-item-name" maxlength="80" placeholder="Nome do prato ou bebida" class="bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                        <input id="menu-item-description" maxlength="160" placeholder="Descrição (opcional)" class="bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                        <select id="menu-item-category" class="bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></select>
+                        <div class="flex gap-2">
+                            <input id="menu-item-price" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Preço (R$)" aria-label="Preço do novo item" class="min-w-0 flex-1 bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500">
+                            <button type="button" onclick="addCustomMenuItem()" class="shrink-0 rounded-lg bg-gold-500 px-3 py-2 text-xs font-bold text-black hover:bg-gold-600">Adicionar</button>
+                        </div>
+                    </div>
                 </div>
                 <div id="cardapio-admin" class="space-y-4"></div>
             </section>
@@ -816,6 +828,13 @@
         let sharedStateSaveCount = 0;
         let sharedStateUpdatedAt = '';
         let lastSharedStateSaveError = '';
+        let printAgentPresenceChannel = null;
+        let printAgentPresenceSubscribed = false;
+        const printAgentPresenceSources = new Map();
+        const PRINT_AGENT_PRESENCE_HEARTBEAT_MS = 5000;
+        const PRINT_AGENT_PRESENCE_TIMEOUT_MS = 15000;
+        const PRINT_AGENT_PRESENCE_SOURCE_ID = window.crypto?.randomUUID?.()
+            || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
         const defaultWhatsAppSample = `#️⃣ *Pedido Nº 3887*
 feito em 16/10/2026 21:15
@@ -916,8 +935,11 @@ R$ 130,00
             const existingOrderIds = new Set((S.orders || []).map(order => String(order.id)));
             S = row.data;
             S.menu = S.menu || JSON.parse(JSON.stringify(DEF));
+            S.menu.cats = S.menu.cats && typeof S.menu.cats === 'object' ? S.menu.cats : {};
+            S.menu.cats.Restaurante = Array.isArray(S.menu.cats.Restaurante) ? S.menu.cats.Restaurante : [];
             S.menu.promotionDays = Array.isArray(S.menu.promotionDays) ? S.menu.promotionDays : [3, 4];
             S.menu.promoPrices = S.menu.promoPrices && typeof S.menu.promoPrices === 'object' ? S.menu.promoPrices : {};
+            S.menu.customItems = Array.isArray(S.menu.customItems) ? S.menu.customItems : [];
             normalizeCaixaState();
             sharedStateUpdatedAt = incomingAt || sharedStateUpdatedAt;
             renderAll(false);
@@ -927,6 +949,66 @@ R$ 130,00
                 newOrders.forEach(scheduleRemoteOrderPrint);
             }
             return true;
+        }
+
+        function initPrintAgentPresence() {
+            if (!supabaseClient || printAgentPresenceChannel) return;
+            printAgentPresenceChannel = supabaseClient
+                .channel('print-agent-presence', { config: { broadcast: { self: false } } })
+                .on('broadcast', { event: 'status' }, message => {
+                    const payload = message.payload;
+                    if (typeof payload?.sourceId !== 'string' || typeof payload.connected !== 'boolean'
+                        || !Number.isFinite(payload.sentAt)) return;
+                    if (Date.now() - payload.sentAt > PRINT_AGENT_PRESENCE_TIMEOUT_MS
+                        || payload.sentAt > Date.now() + PRINT_AGENT_PRESENCE_HEARTBEAT_MS) return;
+                    if (payload.connected) {
+                        printAgentPresenceSources.set(payload.sourceId, payload.sentAt);
+                    } else {
+                        printAgentPresenceSources.delete(payload.sourceId);
+                    }
+                    updateQzConnectionIndicator();
+                })
+                .subscribe(status => {
+                    printAgentPresenceSubscribed = status === 'SUBSCRIBED';
+                    if (printAgentPresenceSubscribed && isPrintAgentConnected()) {
+                        publishPrintAgentPresence(true);
+                    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        console.warn('Não foi possível sincronizar o status do agente de impressão pelo Supabase.');
+                    }
+                    updateQzConnectionIndicator();
+                });
+        }
+
+        async function publishPrintAgentPresence(connected = isPrintAgentConnected()) {
+            if (!printAgentPresenceChannel || !printAgentPresenceSubscribed) return;
+            try {
+                const status = await printAgentPresenceChannel.send({
+                    type: 'broadcast',
+                    event: 'status',
+                    payload: {
+                        sourceId: PRINT_AGENT_PRESENCE_SOURCE_ID,
+                        connected,
+                        sentAt: Date.now()
+                    }
+                });
+                if (status !== 'ok') {
+                    console.warn('O Supabase não confirmou a atualização do status do agente de impressão:', status);
+                }
+            } catch (error) {
+                console.error('Não foi possível publicar o status do agente de impressão:', error);
+            }
+        }
+
+        function isSharedPrintAgentOnline() {
+            const cutoff = Date.now() - PRINT_AGENT_PRESENCE_TIMEOUT_MS;
+            for (const [sourceId, lastSeen] of printAgentPresenceSources) {
+                if (lastSeen < cutoff) {
+                    printAgentPresenceSources.delete(sourceId);
+                } else {
+                    return true;
+                }
+            }
+            return false;
         }
 
         const remotePrintQueue = new Set();
@@ -943,6 +1025,7 @@ R$ 130,00
 
         function initSharedStateSync() {
             if (!supabaseClient) return;
+            initPrintAgentPresence();
             sharedStateChannel = supabaseClient
                 .channel('shared-pos-state')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state', filter: 'id=eq.gp_state' }, payload => {
@@ -1044,7 +1127,7 @@ R$ 130,00
             const adminRoleOption = document.querySelector('#modal-user-role option[value="ADMIN"]');
             if (adminRoleOption) adminRoleOption.hidden = !isAdmin();
             const managerRoleOption = document.querySelector('#modal-user-role option[value="GERENTE"]');
-            if (managerRoleOption) managerRoleOption.hidden = !isAdmin();
+            if (managerRoleOption) managerRoleOption.hidden = false;
             syncRealtimeOnlineOrders();
         }
 
@@ -1484,8 +1567,8 @@ R$ 130,00
             if (!currentUser) return toast('Faça login para gerenciar funcionários.');
             if (!isAdmin() && currentUser.role !== 'GERENTE') return toast('Seu perfil não pode gerenciar funcionários.');
             if (!isAdmin() && id) return toast('Gerentes podem adicionar ou remover funcionários, não editá-los.');
-            if (!isAdmin() && !['GARCOM', 'CAIXA'].includes(role)) {
-                return toast('Gerentes só podem cadastrar garçons e operadores de caixa.');
+            if (!['ADMIN', 'GERENTE', 'GARCOM', 'CAIXA'].includes(role) || (!isAdmin() && role === 'ADMIN')) {
+                return toast('Gerentes podem cadastrar funcionários até o perfil de gerente; somente administradores podem cadastrar administradores.');
             }
             if (!name || pin.length !== 4) {
                 alert('Preencha o nome e um PIN válido de 4 dígitos.');
@@ -1617,6 +1700,7 @@ R$ 130,00
             ac: [['Borda de Catupiry',0],['Borda de Cheddar',0],['Azeitona',0],['Catupiry',0],['Cebola',0],['Cheddar',0],['Milho',0],['Palmito',0],['Tomate',0],['Queijo',0]],
             cats: {
                 'Petiscos': [['Batata Frita Especial',30,'Molho rosê'],['Batata Simples',25,'Molho rosê'],['Batata com Frango em Cubos',0,''],['Batata com Calabresa',0,''],['Bolinho de Carne Seca',0,''],['Bolinho de Bacalhau',0,'8 unidades'],['Bolinho de Presunto e Queijo',0,'8 unidades'],['Carne do Sol com Aipim',0,''],['Coxinha',0,''],['Isca de Frango',0,'Molho rosê'],['Isca de Peixe',0,'Molho rosê']],
+                'Restaurante': [],
                 'Massas': ['Lasanha Bolonhesa','Lasanha de Frango Catupiry','Lasanha de Presunto','Espaguete à Bolonhesa','Escondidinho de Carne','Parmegiana de Frango','Parmegiana de Carne'].map(n => [n, 0, 'Arroz, purê ou macarrão']),
                 'Bebidas': [['Refrigerante Lata',6,'Sprite, Coca-Cola, Fanta e Guaraná'],['Refrigerante 1 Litro',11,'Coca-Cola e Guaraná'],['Red Bull',0,''],['Água Tônica',0,''],['Água c/ Gás',3.5,''],['Água s/ Gás',3,''],['H2O',8,'']],
                 'Sucos': ['Goiaba','Cajá','Manga','Abacaxi','Acerola','Maracujá','Laranja','Limão','Morango'].map(n => ['Suco de ' + n, 0, 'Jarra 750ml']),
@@ -1629,8 +1713,11 @@ R$ 130,00
         const KEY = 'gp_state_v1';
         let S; try { S = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { S = {}; }
         S.menu = S.menu || JSON.parse(JSON.stringify(DEF));
+        S.menu.cats = S.menu.cats && typeof S.menu.cats === 'object' ? S.menu.cats : {};
+        S.menu.cats.Restaurante = Array.isArray(S.menu.cats.Restaurante) ? S.menu.cats.Restaurante : [];
         S.menu.promotionDays = Array.isArray(S.menu.promotionDays) ? S.menu.promotionDays : [3, 4];
         S.menu.promoPrices = S.menu.promoPrices && typeof S.menu.promoPrices === 'object' ? S.menu.promoPrices : {};
+        S.menu.customItems = Array.isArray(S.menu.customItems) ? S.menu.customItems : [];
         if (S.menu.mf && S.menu.mf.join() === '1,2,2,3') S.menu.mf = [4, 4, 4, 4];
         if (S.menu.svc === undefined) S.menu.svc = 10;
         S.clientes = S.clientes || []; S.orders = S.orders || []; S.seq = S.seq || 1; S.caixa = S.caixa || newCaixa(); S.caixa.status = S.caixa.status || 'FECHADO'; S.caixaHistory = S.caixaHistory || [];
@@ -1813,11 +1900,13 @@ R$ 130,00
 
         function updateQzConnectionIndicator() {
             const connected = isPrintAgentConnected();
-            qzConnectionState = qzReconnectPending ? 'connecting' : connected ? 'connected' : 'disconnected';
+            const remoteConnected = !connected && isSharedPrintAgentOnline();
+            qzConnectionState = qzReconnectPending ? 'connecting' : connected ? 'connected' : remoteConnected ? 'remote-connected' : 'disconnected';
             const label = qzConnectionState === 'connecting' ? 'Conectando ao agente de impressão...' :
-                connected ? 'Agente de impressão conectado neste computador' : 'Agente de impressão desconectado';
+                connected ? 'Agente de impressão conectado neste computador' :
+                    remoteConnected ? 'Agente de impressão conectado no computador do caixa' : 'Agente de impressão desconectado';
             const color = qzConnectionState === 'connecting' ? 'bg-amber-400' :
-                qzConnectionState === 'connected' ? 'bg-emerald-500' : 'bg-red-500';
+                qzConnectionState === 'connected' || qzConnectionState === 'remote-connected' ? 'bg-emerald-500' : 'bg-red-500';
             const button = $('qz-connection-button');
             if (button) {
                 button.setAttribute('aria-label', label);
@@ -1828,13 +1917,22 @@ R$ 130,00
             const settingsLabel = $('qz-settings-status');
             if (settingsLabel) settingsLabel.textContent = label;
             const reconnectLabel = $('qz-reconnect-label');
-            if (reconnectLabel) reconnectLabel.textContent = 'Reconectar e atualizar';
+            if (reconnectLabel) reconnectLabel.textContent = remoteConnected ? 'Agente online no computador' : 'Reconectar e atualizar';
             ['qz-connection-indicator', 'qz-menu-indicator'].forEach(id => {
                 const indicator = $(id);
-                if (indicator) indicator.className = `w-2.5 h-2.5 rounded-full ${color}${qzConnectionState === 'connected' ? ' animate-pulse' : ''}`;
+                if (indicator) indicator.className = `w-2.5 h-2.5 rounded-full ${color}${connected || remoteConnected ? ' animate-pulse' : ''}`;
             });
             const settingsIndicator = $('qz-settings-indicator');
-            if (settingsIndicator) settingsIndicator.className = `w-2.5 h-2.5 rounded-full ${color}${qzConnectionState === 'connected' ? ' animate-pulse' : ''}`;
+            if (settingsIndicator) settingsIndicator.className = `w-2.5 h-2.5 rounded-full ${color}${connected || remoteConnected ? ' animate-pulse' : ''}`;
+            const settingsStatus = $('qz-status');
+            if (settingsStatus && remoteConnected) {
+                settingsStatus.textContent = 'Agente online no computador do caixa. A impressão é realizada por esse computador.';
+                settingsStatus.className = 'text-xs text-emerald-400';
+            } else if (settingsStatus && settingsStatus.dataset.remotePresence === 'true') {
+                settingsStatus.textContent = 'Conecte ao agente Java para listar as impressoras disponíveis.';
+                settingsStatus.className = 'text-xs text-gray-400';
+            }
+            if (settingsStatus) settingsStatus.dataset.remotePresence = String(remoteConnected);
         }
 
         function rejectPrintAgentRequests(error) {
@@ -1904,6 +2002,7 @@ R$ 130,00
                     clearTimeout(timeout);
                     succeedConnection();
                     setQzStatus('Agente Java conectado.');
+                    publishPrintAgentPresence(true);
                     updateQzConnectionIndicator();
                     return;
                 }
@@ -1943,6 +2042,7 @@ R$ 130,00
                     printAgentAuthenticated = false;
                     qzReconnectPending = false;
                     rejectPrintAgentRequests(new Error('A conexão com o agente de impressão foi encerrada.'));
+                    publishPrintAgentPresence(false);
                     updateQzConnectionIndicator();
                 }
                 if (!settled) {
@@ -2285,6 +2385,14 @@ R$ 130,00
         }
 
         async function reconnectQzTray() {
+            if (!isPrintAgentConnected() && isSharedPrintAgentOnline()) {
+                toast('O agente já está online no computador do caixa. A impressão é feita por lá.');
+                return;
+            }
+            if (!printAgentToken) {
+                toast('Para conectar o agente, use o computador onde ele está instalado.');
+                return;
+            }
             const button = $('qz-reconnect-button');
             button.disabled = true;
             button.classList.add('opacity-60', 'cursor-wait');
@@ -2346,6 +2454,15 @@ R$ 130,00
             $('o-pay').innerHTML = ['Pagar depois', ...PAYS].map(p => `<option>${p}</option>`).join('');
             renderQzSettings(); updateQzConnectionIndicator(); onTypeChange(); renderMenu(); renderKDS(); renderCardapioAdmin();
             setInterval(updateQzConnectionIndicator, 2000);
+            setInterval(() => {
+                if (isPrintAgentConnected()) publishPrintAgentPresence(true);
+            }, PRINT_AGENT_PRESENCE_HEARTBEAT_MS);
+            if (printAgentToken) {
+                connectPrintAgent().catch(error => {
+                    console.error('Não foi possível conectar automaticamente ao agente de impressão:', error);
+                    setQzStatus(`Falha na conexão: ${error.message}`, true);
+                });
+            }
             $('btn-toggle-sidebar').addEventListener('click', toggleMobileSidebar);
             $('sidebar-backdrop').addEventListener('click', () => setMobileSidebarOpen(false));
             document.addEventListener('click', event => {
@@ -2392,6 +2509,16 @@ R$ 130,00
                 const key = `item:${categoryIndex}:${itemIndex}`;
                 out.push({ c, n: it[0], d: it[2], p: promotionPrice(key, it[1]), regularPrice: it[1] });
             }));
+            M.customItems.forEach(item => {
+                const key = `custom:${item.id}`;
+                out.push({
+                    c: item.category,
+                    n: item.name,
+                    d: item.description || '',
+                    p: promotionPrice(key, item.price),
+                    regularPrice: item.price
+                });
+            });
             return out;
         }
         function renderMenu() {
@@ -3208,6 +3335,64 @@ R$ 130,00
             if (k === 'svc') M.svc = n; else if (k === 'ac') M.ac[a][1] = n; else if (k === 'c') M.cats[names[a]][b][1] = n; else M[k][a] = k === 'mf' ? Math.max(1, Math.round(n)) : n;
             save(); renderCardapioAdmin(); renderMenu();
         }
+        function addCustomMenuItem() {
+            if (!canManagePromotions()) return toast('Apenas administrador e gerente podem alterar o cardápio.');
+            const name = $('menu-item-name').value.trim();
+            const description = $('menu-item-description').value.trim();
+            const category = $('menu-item-category').value;
+            const price = Number($('menu-item-price').value);
+            if (!name) return toast('Informe o nome do prato ou bebida.');
+            if (!Object.hasOwn(S.menu.cats, category)) return toast('Selecione uma categoria válida.');
+            if (!Number.isFinite(price) || price <= 0) return toast('Informe um preço maior que zero.');
+            if (S.menu.customItems.some(item => item.category === category && item.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+                return toast('Já existe um item com esse nome nesta categoria.');
+            }
+            const id = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            S.menu.customItems.push({ id, category, name, description, price: +price.toFixed(2) });
+            $('menu-item-name').value = '';
+            $('menu-item-description').value = '';
+            $('menu-item-price').value = '';
+            save();
+            renderCardapioAdmin();
+            renderMenu();
+            toast(`${name} adicionado ao cardápio.`);
+        }
+        function updateCustomMenuItem(index, field, value) {
+            if (!canManagePromotions()) return toast('Apenas administrador e gerente podem alterar o cardápio.');
+            const item = S.menu.customItems[index];
+            if (!item || !['name', 'description', 'price'].includes(field)) return;
+            if (field === 'name' || field === 'description') {
+                const text = value.trim();
+                if (field === 'name' && !text) return toast('O nome do item não pode ficar vazio.');
+                if (field === 'name' && S.menu.customItems.some((candidate, itemIndex) =>
+                    itemIndex !== index && candidate.category === item.category
+                    && candidate.name.toLocaleLowerCase() === text.toLocaleLowerCase())) {
+                    return toast('Já existe um item com esse nome nesta categoria.');
+                }
+                item[field] = text;
+            } else {
+                const price = Number(value);
+                if (!Number.isFinite(price) || price <= 0) return toast('Informe um preço maior que zero.');
+                item.price = +price.toFixed(2);
+                const promoKey = `custom:${item.id}`;
+                if (Number(S.menu.promoPrices[promoKey]) >= item.price) delete S.menu.promoPrices[promoKey];
+            }
+            save();
+            renderCardapioAdmin();
+            renderMenu();
+        }
+        function removeCustomMenuItem(index) {
+            if (!canManagePromotions()) return toast('Apenas administrador e gerente podem alterar o cardápio.');
+            const item = S.menu.customItems[index];
+            if (!item) return;
+            if (!confirm(`Remover ${item.name} do cardápio?`)) return;
+            S.menu.customItems.splice(index, 1);
+            delete S.menu.promoPrices[`custom:${item.id}`];
+            save();
+            renderCardapioAdmin();
+            renderMenu();
+            toast(`${item.name} removido do cardápio.`);
+        }
         function setPromotionDay(day, enabled) {
             if (!canManagePromotions()) return toast('Apenas administrador e gerente podem alterar promoções.');
             const days = new Set(S.menu.promotionDays);
@@ -3236,7 +3421,14 @@ R$ 130,00
         }
         function renderCardapioAdmin() {
             if (!canManagePromotions()) return;
+            S.menu.customItems = Array.isArray(S.menu.customItems) ? S.menu.customItems : [];
             const M = S.menu, names = Object.keys(M.cats);
+            const categorySelect = $('menu-item-category');
+            if (categorySelect) {
+                const previousCategory = categorySelect.value;
+                categorySelect.innerHTML = names.map(category => `<option value="${esc(category)}">${esc(category)}</option>`).join('');
+                if (names.includes(previousCategory)) categorySelect.value = previousCategory;
+            }
             const inp = (v, h, w = 'w-24') => `<input type="number" step="0.01" min="0" value="${v || ''}" placeholder="0,00" onchange="${h}" class="${w} bg-dark-bg border border-dark-border rounded p-1.5 text-xs text-right text-gray-200 focus:outline-none focus:border-gold-500">`;
             const promoInp = (key, regularPrice) => `<input type="number" step="0.01" min="0" max="${Math.max(0, Number(regularPrice) - 0.01)}" value="${M.promoPrices[key] ?? ''}" placeholder="Promo" onchange="setPromoPrice('${key}',this.value,'${Number(regularPrice) || 0}')" class="w-24 bg-dark-bg border border-emerald-500/30 rounded p-1.5 text-xs text-right text-emerald-300 focus:outline-none focus:border-emerald-500" aria-label="Preço promocional">`;
             const card = (t, b) => `<div class="bg-dark-card rounded-xl border border-dark-border p-4"><h3 class="font-bold text-sm text-gold-500 mb-3">${t}</h3>${b}</div>`;
@@ -3249,6 +3441,14 @@ R$ 130,00
             h += card('Taxa de serviço das mesas', `<div class="flex justify-between items-center text-xs text-gray-300"><span>Percentual sobre o total da comanda (%)</span>${inp(M.svc, "setP('svc',0,null,this.value)")}</div>`);
             h += card('Acréscimos (borda e adicionais)', `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${M.ac.map((a, i) => `<div class="flex justify-between items-center text-xs text-gray-300"><span>${a[0]}</span>${inp(a[1], `setP('ac',${i},null,this.value)`)}</div>`).join('')}</div>`);
             names.forEach((c, ci) => h += card(c, `<div class="grid grid-cols-1 xl:grid-cols-2 gap-2">${M.cats[c].map((it, ii) => `<div class="flex flex-wrap justify-between items-center gap-2 text-xs text-gray-300 border-b border-dark-border pb-2"><span class="min-w-32">${esc(it[0])}</span><div class="flex items-center gap-2"><label class="flex items-center gap-1 text-[10px] text-gray-500">Normal ${inp(it[1], `setP('c',${ci},${ii},this.value)`)}</label><label class="flex items-center gap-1 text-[10px] text-emerald-300">Promo ${promoInp(`item:${ci}:${ii}`, it[1])}</label></div></div>`).join('')}</div>`));
+            const customItems = M.customItems.map((item, index) => `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2 items-center rounded-lg border border-dark-border p-3">
+                <input value="${esc(item.name)}" maxlength="80" aria-label="Nome do item" onchange="updateCustomMenuItem(${index},'name',this.value)" class="bg-dark-bg border border-dark-border rounded p-2 text-xs text-gray-200">
+                <input value="${esc(item.description || '')}" maxlength="160" aria-label="Descrição do item" placeholder="Descrição (opcional)" onchange="updateCustomMenuItem(${index},'description',this.value)" class="bg-dark-bg border border-dark-border rounded p-2 text-xs text-gray-200">
+                <span class="text-[10px] text-gray-400">${esc(item.category)}</span>
+                <div class="flex items-center gap-2"><label class="text-[10px] text-gray-500">Normal ${inp(item.price, `updateCustomMenuItem(${index},'price',this.value)`)}</label><label class="text-[10px] text-emerald-300">Promo ${promoInp(`custom:${item.id}`, item.price)}</label></div>
+                <button type="button" onclick="removeCustomMenuItem(${index})" class="justify-self-start rounded border border-red-500/30 px-3 py-2 text-xs text-red-400 hover:bg-red-500/10">Remover</button>
+            </div>`).join('');
+            h += card('Itens adicionados ao cardápio', customItems || '<p class="text-xs text-gray-400">Nenhum item personalizado adicionado.</p>');
             $('cardapio-admin').innerHTML = h;
             const miss = [...M.pt, ...M.pd].filter(v => !v).length + M.ac.filter(a => !a[1]).length + names.reduce((a, c) => a + M.cats[c].filter(i => !i[1]).length, 0);
             $('cardapio-alert').textContent = miss ? `⚠ ${miss} preço(s) ainda não preenchidos.` : '';
@@ -3256,4 +3456,4 @@ R$ 130,00
 
     </script>
 </body>
-</html>
+</html> 
