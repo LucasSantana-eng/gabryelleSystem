@@ -420,9 +420,12 @@
                         <div id="cart-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
                         <div id="cart-svc-row" class="hidden border-t border-dark-border pt-2"><div class="flex justify-between items-center text-xs text-gray-300"><label class="flex items-center gap-2"><input id="o-svc" type="checkbox" checked onchange="renderCart()"> Taxa de serviço (<span id="svc-pct"></span>%)</label><span id="cart-svc"></span></div></div>
                         <div class="flex justify-between font-bold text-sm text-gold-400 border-t border-dark-border pt-2"><span>TOTAL</span><span id="cart-total">R$ 0,00</span></div>
-                        <select id="o-pay" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></select>
+                        <div id="o-payment-row">
+                            <select id="o-pay" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></select>
+                        </div>
+                        <p id="o-mesa-payment-note" class="hidden text-[11px] text-gray-400">A mesa continuará aberta. O pagamento será confirmado ao fechar a conta.</p>
                         <label class="flex items-center gap-2 text-xs text-gray-400"><input id="o-print" type="checkbox" checked> Imprimir comanda (cozinha e caixa)</label>
-                        <button onclick="createOrder()" class="w-full bg-gold-500 hover:bg-gold-600 text-black font-bold py-2.5 rounded-lg text-xs">FINALIZAR PEDIDO</button>
+                        <button onclick="createOrder()" class="w-full bg-gold-500 hover:bg-gold-600 text-black font-bold py-2.5 rounded-lg text-xs"><span id="o-submit-label">FINALIZAR PEDIDO</span></button>
                     </div>
                 </div>
                 <details class="bg-dark-card p-4 rounded-xl border border-dark-border">
@@ -715,6 +718,29 @@
             <div>
                 <h3 class="text-lg font-bold text-white">Conferência e fechamento do caixa</h3>
                 <p id="close-cash-expected" class="text-xs text-gray-400 mt-1"></p>
+            </div>
+
+            <div id="payment-modal" class="fixed inset-0 z-50 bg-black/80 hidden items-center justify-center p-4">
+                <div class="bg-dark-card border border-dark-border rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-2xl">
+                    <div>
+                        <h3 id="payment-modal-title" class="text-lg font-bold text-white">Receber pagamento</h3>
+                        <p id="payment-modal-context" class="mt-1 text-xs text-gray-400"></p>
+                    </div>
+                    <div class="flex justify-between rounded-lg border border-dark-border bg-dark-bg p-3 text-sm font-bold text-white">
+                        <span>Total a pagar</span><span id="payment-modal-total" class="text-gold-400"></span>
+                    </div>
+                    <div id="payment-lines" class="space-y-2"></div>
+                    <button type="button" onclick="addPaymentLine()" class="rounded-lg border border-dark-border px-3 py-2 text-xs text-gray-200 hover:border-gold-500">+ Adicionar forma de pagamento</button>
+                    <div class="space-y-2 rounded-lg border border-dark-border p-3 text-xs">
+                        <div class="flex justify-between text-gray-300"><span>Valor ainda faltando</span><span id="payment-remaining" class="font-bold text-amber-400"></span></div>
+                        <div class="flex justify-between text-gray-300"><span>Troco</span><span id="payment-change" class="font-bold text-emerald-400"></span></div>
+                    </div>
+                    <p id="payment-error" class="hidden text-xs text-red-400"></p>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" onclick="closePaymentModal()" class="rounded-lg border border-dark-border px-4 py-2 text-xs text-gray-300 hover:text-white">Cancelar</button>
+                        <button id="payment-confirm-button" type="button" onclick="confirmOrderPayment()" class="rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold text-black hover:bg-emerald-600">Confirmar pagamento</button>
+                    </div>
+                </div>
             </div>
             <div class="space-y-3 text-xs">
                 <label class="block text-gray-300">Valor retirado no fechamento (R$)
@@ -1013,7 +1039,8 @@ R$ 130,00
 
         const remotePrintQueue = new Set();
         function scheduleRemoteOrderPrint(order) {
-            if (!order || order.printRequested === false || !qzSettings.enabled || !qzSettings.automatic) return;
+            if (!order || order.printRequested === false || !qzSettings.enabled || !qzSettings.automatic
+                || !isPrintAgentConnected()) return;
             const orderId = String(order.id);
             if (remotePrintQueue.has(orderId)) return;
             remotePrintQueue.add(orderId);
@@ -1803,7 +1830,7 @@ R$ 130,00
         } catch (error) {
             console.error('Não foi possível carregar o token do agente de impressão:', error);
         }
-        let cart = [], curCat = 'Pizzas', pm = null, selectedMesa = null, selectedCashHistoryId = null, expandedOrderId = null;
+        let cart = [], curCat = 'Pizzas', pm = null, selectedMesa = null, selectedCashHistoryId = null, expandedOrderId = null, pendingPaymentTarget = null;
 
         const $ = id => document.getElementById(id);
         const money = v => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
@@ -1904,7 +1931,7 @@ R$ 130,00
             qzConnectionState = qzReconnectPending ? 'connecting' : connected ? 'connected' : remoteConnected ? 'remote-connected' : 'disconnected';
             const label = qzConnectionState === 'connecting' ? 'Conectando ao agente de impressão...' :
                 connected ? 'Agente de impressão conectado neste computador' :
-                    remoteConnected ? 'Agente de impressão conectado no computador do caixa' : 'Agente de impressão desconectado';
+                    remoteConnected ? 'Impressora online no computador do caixa' : 'Agente de impressão desconectado';
             const color = qzConnectionState === 'connecting' ? 'bg-amber-400' :
                 qzConnectionState === 'connected' || qzConnectionState === 'remote-connected' ? 'bg-emerald-500' : 'bg-red-500';
             const button = $('qz-connection-button');
@@ -2476,10 +2503,15 @@ R$ 130,00
         }
         function onTypeChange() {
             const t = $('o-type').value;
+            const isMesa = t === 'MESA';
             $('o-mesa').classList.toggle('hidden', t !== 'MESA');
             $('o-del-box').classList.toggle('hidden', t !== 'DELIVERY');
             $('o-counter-box').classList.toggle('hidden', !['BALCAO', 'RETIRADA'].includes(t));
-            $('o-pay').value = t === 'MESA' ? 'Pagar depois' : 'PIX';
+            $('o-payment-row').classList.toggle('hidden', isMesa);
+            $('o-mesa-payment-note').classList.toggle('hidden', !isMesa);
+            $('o-submit-label').textContent = isMesa ? 'LANÇAR PEDIDO NA MESA' : 'FINALIZAR PEDIDO';
+            if (isMesa) $('o-pay').value = 'Pagar depois';
+            else if ($('o-pay').value === 'Pagar depois') $('o-pay').value = 'PIX';
             renderCart();
         }
 
@@ -2610,10 +2642,14 @@ R$ 130,00
             o.sub = o.items.reduce((a, x) => a + x.qty * x.price, 0); o.total = +(o.sub + (o.taxa || 0) + (o.svc || 0)).toFixed(2);
             S.orders.push(o);
             if (o.type === 'DELIVERY') upsertCli(o);
-            if (pay && pay !== 'Pagar depois') payOrder(o, pay);
+            if (o.type !== 'MESA' && pay && pay !== 'Pagar depois') payOrder(o, pay);
             renderAll(); return o;
         }
         function payOrder(o, p) {
+            if (o.type === 'MESA') {
+                toast('Pedidos de mesa permanecem abertos até a confirmação da conta completa.');
+                return false;
+            }
             if (!caixaAberto()) {
                 toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
                 return false;
@@ -2627,7 +2663,7 @@ R$ 130,00
             if (!cart.length) return toast('Adicione itens ao pedido');
             if (!currentUser) return toast('Faça login antes de lançar um pedido.');
             const type = $('o-type').value;
-            const payment = $('o-pay').value;
+            const payment = type === 'MESA' ? 'Pagar depois' : $('o-pay').value;
             if (payment !== 'Pagar depois' && !caixaAberto()) return toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
             const customerName = type === 'DELIVERY' ? $('o-cli').value.trim() :
                 ['BALCAO', 'RETIRADA'].includes(type) ? $('o-counter-cli').value.trim() : '';
@@ -2641,14 +2677,198 @@ R$ 130,00
                 selectedMesa = o.mesa;
                 switchTab('mesas');
             }
-            if ($('o-print').checked && qzSettings.enabled && qzSettings.automatic) printBothThermal(o);
+            if ($('o-print').checked && qzSettings.enabled && qzSettings.automatic && isPrintAgentConnected()) printBothThermal(o);
         }
-        function askPay() { const r = prompt('Forma de pagamento:\n1 - Dinheiro\n2 - PIX\n3 - Cartão de Crédito\n4 - Cartão de Débito'); return PAYS[(+r) - 1]; }
         function receive(id) {
             if (!caixaAberto()) return toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
-            const o = S.orders.find(x => x.id === id); if (!o || o.paid) return;
-            const p = (o.payPref && confirm(`Receber ${money(o.total)} em ${o.payPref}?\nOK = confirmar | Cancelar = escolher outra forma`)) ? o.payPref : askPay();
-            if (!p || !payOrder(o, p)) return; renderAll();
+            const order = S.orders.find(item => String(item.id) === String(id));
+            if (!order || order.paid || order.status === 'CANCELADO') return;
+            if (order.type === 'MESA') {
+                const tableOrders = mesaOrders(Number(order.mesa));
+                if (!tableOrders.length) return toast('Esta mesa não possui pedidos em aberto.');
+                openPaymentModal(tableOrders, Number(order.mesa));
+                return;
+            }
+            openPaymentModal([order]);
+        }
+        function openPaymentModal(orders, mesaNumber = null) {
+            const openOrders = orders.filter(isOrderOpen);
+            if (!openOrders.length) return toast('Não há pedidos em aberto para receber.');
+            pendingPaymentTarget = {
+                orderIds: openOrders.map(order => String(order.id)),
+                mesaNumber
+            };
+            const total = openOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+            $('payment-modal-title').textContent = mesaNumber === null ? 'Receber pagamento' : `Fechar conta da Mesa ${mesaNumber}`;
+            $('payment-modal-context').textContent = mesaNumber === null
+                ? `Pedido #${openOrders[0].id}`
+                : `${openOrders.length} pedido(s) em aberto nesta mesa`;
+            $('payment-modal-total').textContent = money(total);
+            $('payment-lines').innerHTML = '';
+            addPaymentLine('Dinheiro', total);
+            $('payment-error').classList.add('hidden');
+            $('payment-modal').classList.remove('hidden');
+            $('payment-modal').classList.add('flex');
+            updatePaymentPreview();
+        }
+        function addPaymentLine(method = 'PIX', amount = 0) {
+            const container = $('payment-lines');
+            const index = container.children.length;
+            const options = PAYS.map(payment => `<option value="${esc(payment)}" ${payment === method ? 'selected' : ''}>${esc(payment)}</option>`).join('');
+            container.insertAdjacentHTML('beforeend', `<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2" data-payment-line>
+                <select aria-label="Forma de pagamento" onchange="updatePaymentPreview()" class="min-w-0 bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200">${options}</select>
+                <input type="number" min="0" step="0.01" inputmode="decimal" value="${Number(amount).toFixed(2)}" aria-label="Valor recebido nesta forma de pagamento" oninput="updatePaymentPreview()" class="min-w-0 bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200">
+                <button type="button" aria-label="Remover forma de pagamento" onclick="removePaymentLine(${index})" class="rounded-lg border border-dark-border px-3 py-2 text-xs text-red-400 hover:border-red-400">Remover</button>
+            </div>`);
+            updatePaymentPreview();
+        }
+        function removePaymentLine(index) {
+            const line = $('payment-lines').children[index];
+            if (!line) return;
+            line.remove();
+            if (!$('payment-lines').children.length) {
+                addPaymentLine('Dinheiro', 0);
+                return;
+            }
+            [...$('payment-lines').children].forEach((paymentLine, lineIndex) => {
+                paymentLine.querySelector('button').setAttribute('onclick', `removePaymentLine(${lineIndex})`);
+            });
+            updatePaymentPreview();
+        }
+        function calculatePaymentAmounts(total, lines) {
+            const totalCents = Math.round(Number(total) * 100);
+            if (!Number.isFinite(totalCents) || totalCents <= 0) return { error: 'O total da conta precisa ser maior que zero.' };
+            let cashReceivedCents = 0;
+            let otherPaymentsCents = 0;
+            const requestedPayments = [];
+            for (const line of lines) {
+                const amount = Number(line.amount);
+                if (!PAYS.includes(line.method) || !Number.isFinite(amount) || amount < 0) {
+                    return { error: 'Confira as formas de pagamento e os valores informados.' };
+                }
+                const amountCents = Math.round(amount * 100);
+                if (line.method === 'Dinheiro') cashReceivedCents += amountCents;
+                else otherPaymentsCents += amountCents;
+                requestedPayments.push({ method: line.method, amountCents });
+            }
+            if (otherPaymentsCents > totalCents) {
+                return { error: 'O valor das outras formas de pagamento não pode ultrapassar o total da conta.' };
+            }
+            const cashAppliedCents = Math.min(cashReceivedCents, totalCents - otherPaymentsCents);
+            const paymentsByMethod = new Map();
+            requestedPayments.forEach(payment => {
+                if (payment.method === 'Dinheiro' || payment.amountCents === 0) return;
+                paymentsByMethod.set(payment.method, (paymentsByMethod.get(payment.method) || 0) + payment.amountCents);
+            });
+            if (cashAppliedCents) paymentsByMethod.set('Dinheiro', cashAppliedCents);
+            const paidCents = cashAppliedCents + otherPaymentsCents;
+            return {
+                payments: [...paymentsByMethod].map(([method, amountCents]) => ({ method, amountCents })),
+                cashReceivedCents,
+                cashAppliedCents,
+                changeCents: cashReceivedCents - cashAppliedCents,
+                remainingCents: totalCents - paidCents
+            };
+        }
+        function readPaymentDraft() {
+            const lines = [...$('payment-lines').querySelectorAll('[data-payment-line]')].map(line => ({
+                method: line.querySelector('select').value,
+                amount: line.querySelector('input').value
+            }));
+            const total = pendingPaymentTarget?.mesaNumber === null
+                ? S.orders.find(order => String(order.id) === pendingPaymentTarget?.orderIds[0] && isOrderOpen(order))?.total
+                : mesaOrders(pendingPaymentTarget?.mesaNumber).reduce((sum, order) => sum + Number(order.total || 0), 0);
+            return { total: Number(total), result: calculatePaymentAmounts(total, lines) };
+        }
+        function updatePaymentPreview() {
+            if (!pendingPaymentTarget || !$('payment-modal') || $('payment-modal').classList.contains('hidden')) return;
+            const { result } = readPaymentDraft();
+            const error = result.error || '';
+            $('payment-error').textContent = error;
+            $('payment-error').classList.toggle('hidden', !error);
+            $('payment-modal-total').textContent = money(readPaymentDraft().total);
+            $('payment-remaining').textContent = Number.isFinite(result.remainingCents)
+                ? money(result.remainingCents / 100) : '—';
+            $('payment-change').textContent = Number.isFinite(result.changeCents)
+                ? money(result.changeCents / 100) : money(0);
+            $('payment-confirm-button').disabled = Boolean(error) || result.remainingCents !== 0;
+            $('payment-confirm-button').classList.toggle('opacity-50', $('payment-confirm-button').disabled);
+        }
+        function closePaymentModal() {
+            $('payment-modal').classList.add('hidden');
+            $('payment-modal').classList.remove('flex');
+            pendingPaymentTarget = null;
+        }
+        function confirmOrderPayment() {
+            if (!pendingPaymentTarget) return;
+            if (!caixaAberto()) return toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
+            const orders = pendingPaymentTarget.mesaNumber === null
+                ? S.orders.filter(order => pendingPaymentTarget.orderIds.includes(String(order.id)) && isOrderOpen(order))
+                : mesaOrders(pendingPaymentTarget.mesaNumber);
+            if (!orders.length) {
+                closePaymentModal();
+                return toast('Os pedidos desta conta já foram pagos ou cancelados.');
+            }
+            const { result } = readPaymentDraft();
+            if (result.error) return toast(result.error);
+            if (result.remainingCents !== 0) {
+                $('payment-error').textContent = `Ainda falta ${money(result.remainingCents / 100)} para completar a conta.`;
+                $('payment-error').classList.remove('hidden');
+                return;
+            }
+            const payments = result.payments;
+            const orderBalances = orders.map(order => Math.round(Number(order.total || 0) * 100));
+            const allocations = orders.map(() => payments.map(() => 0));
+            let allocationFailed = false;
+            payments.forEach((payment, paymentIndex) => {
+                let unallocated = payment.amountCents;
+                for (let orderIndex = 0; orderIndex < orders.length && unallocated > 0; orderIndex++) {
+                    const applied = Math.min(orderBalances[orderIndex], unallocated);
+                    allocations[orderIndex][paymentIndex] += applied;
+                    orderBalances[orderIndex] -= applied;
+                    unallocated -= applied;
+                }
+                if (unallocated > 0) allocationFailed = true;
+            });
+            if (allocationFailed) return toast('Não foi possível distribuir o pagamento entre os pedidos. Confira os valores e tente novamente.');
+            const timestamp = Date.now();
+            let changeRecorded = false;
+            orders.forEach((order, orderIndex) => {
+                const orderPayments = payments.map((payment, paymentIndex) => ({
+                    method: payment.method,
+                    amount: allocations[orderIndex][paymentIndex] / 100
+                })).filter(payment => payment.amount > 0);
+                order.paid = true;
+                order.pay = orderPayments.map(payment => payment.method).join(' + ');
+                order.paymentDetails = orderPayments;
+                order.change = 0;
+                order.paidAt = timestamp;
+                orderPayments.forEach(payment => {
+                    const movement = {
+                        t: timestamp,
+                        type: 'Venda',
+                        desc: `Pedido Nº ${order.id} (${where(order)})`,
+                        pay: payment.method,
+                        v: payment.amount,
+                        orderId: order.id,
+                        orderType: order.type,
+                        by: order.by || ''
+                    };
+                    if (payment.method === 'Dinheiro' && !changeRecorded) {
+                        movement.cashReceived = result.cashReceivedCents / 100;
+                        movement.change = result.changeCents / 100;
+                        order.change = result.changeCents / 100;
+                        changeRecorded = true;
+                    }
+                    S.caixa.movs.push(movement);
+                });
+            });
+            const tableNumber = pendingPaymentTarget.mesaNumber;
+            closePaymentModal();
+            renderAll();
+            toast(tableNumber === null
+                ? `Pedido recebido. Troco: ${money(result.changeCents / 100)}.`
+                : `Conta da Mesa ${tableNumber} paga. Troco: ${money(result.changeCents / 100)}.`);
         }
         function cancelOrder(id) {
             const order = S.orders.find(item => item.id === id);
@@ -2702,10 +2922,12 @@ R$ 130,00
                             ${o.svc ? `<div class="flex justify-between"><span>Serviço</span><span>${money(o.svc)}</span></div>` : ''}
                             <div class="flex justify-between font-bold text-white"><span>Total</span><span class="text-gold-400">${money(o.total)}</span></div>
                             <div class="flex justify-between"><span>Pagamento</span><span>${esc(o.paid ? o.pay : o.payPref || 'A receber')}</span></div>
+                            ${o.paid && o.change ? `<div class="flex justify-between"><span>Troco</span><span>${money(o.change)}</span></div>` : ''}
                         </div>
+                        ${isOrderOpen(o) ? `<div class="flex justify-end border-t border-dark-border pt-3"><button type="button" onclick="receive(${o.id})" class="rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold text-black hover:bg-emerald-600">${o.type === 'MESA' ? 'Fechar conta da mesa' : 'Fechar conta / Receber'}</button></div>` : ''}
                     </div>
                 </td></tr>`;
-                return `<tr class="hover:bg-dark-hover"><td class="p-3 font-bold text-gold-500">#${o.id}</td><td class="p-3 font-medium text-white">${esc(o.type === 'DELIVERY' ? o.cli : where(o))}${o.type !== 'DELIVERY' && o.cli ? `<div class="text-[10px] text-gray-300">${esc(o.cli)}</div>` : ''}<div class="text-[10px] text-gray-500">${esc(o.by || '')}</div></td><td class="p-3 text-gray-400">${esc(o.bairro || '-')}</td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${c}-500/10 text-${c}-400">${l}</span>${o.paid ? `<div class="text-[10px] text-gray-500 mt-1">${esc(o.pay)}</div>` : ''}</td><td class="p-3 font-bold text-white">${money(o.total)}</td><td class="p-3 text-right whitespace-nowrap"><div class="inline-flex items-center gap-1"><button onclick="toggleOrderDetails(${o.id})" aria-label="${expandedOrderId === o.id ? 'Ocultar' : 'Ver'} pedido ${o.id}" title="${expandedOrderId === o.id ? 'Ocultar pedido' : 'Ver pedido'}" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="${expandedOrderId === o.id ? 'chevron-up' : 'list'}" class="w-4 h-4"></i></button><button onclick="printThermal('kitchen',${o.id})" aria-label="Reimprimir comanda da cozinha do pedido ${o.id}" title="Reimprimir cozinha" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="chef-hat" class="w-4 h-4"></i></button><button onclick="printThermal('caixa',${o.id})" aria-label="Reimprimir comanda geral do pedido ${o.id}" title="Reimprimir comanda geral" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="printer" class="w-4 h-4"></i></button>${live && !o.paid ? `<button onclick="receive(${o.id})" class="bg-gold-500 text-black text-xs font-bold px-2 py-1 rounded">Receber</button><button onclick="cancelOrder(${o.id})" aria-label="Cancelar pedido ${o.id}" title="Cancelar pedido" class="text-red-400 text-xs px-1">✕</button>` : ''}</div></td></tr>${expandedOrderId === o.id ? details : ''}`;
+                return `<tr class="hover:bg-dark-hover"><td class="p-3 font-bold text-gold-500">#${o.id}</td><td class="p-3 font-medium text-white">${esc(o.type === 'DELIVERY' ? o.cli : where(o))}${o.type !== 'DELIVERY' && o.cli ? `<div class="text-[10px] text-gray-300">${esc(o.cli)}</div>` : ''}<div class="text-[10px] text-gray-500">${esc(o.by || '')}</div></td><td class="p-3 text-gray-400">${esc(o.bairro || '-')}</td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${c}-500/10 text-${c}-400">${l}</span>${o.paid ? `<div class="text-[10px] text-gray-500 mt-1">${esc(o.pay)}</div>` : ''}</td><td class="p-3 font-bold text-white">${money(o.total)}</td><td class="p-3 text-right whitespace-nowrap"><div class="inline-flex items-center gap-1"><button onclick="toggleOrderDetails(${o.id})" aria-label="${expandedOrderId === o.id ? 'Ocultar' : 'Ver'} pedido ${o.id}" title="${expandedOrderId === o.id ? 'Ocultar pedido' : 'Ver pedido'}" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="${expandedOrderId === o.id ? 'chevron-up' : 'list'}" class="w-4 h-4"></i></button><button onclick="printThermal('kitchen',${o.id})" aria-label="Reimprimir comanda da cozinha do pedido ${o.id}" title="Reimprimir cozinha" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="chef-hat" class="w-4 h-4"></i></button><button onclick="printThermal('caixa',${o.id})" aria-label="Reimprimir comanda geral do pedido ${o.id}" title="Reimprimir comanda geral" class="bg-dark-bg border border-dark-border text-xs p-1.5 rounded hover:border-gold-500"><i data-lucide="printer" class="w-4 h-4"></i></button>${live && !o.paid ? `<button onclick="receive(${o.id})" class="bg-gold-500 text-black text-xs font-bold px-2 py-1 rounded">${o.type === 'MESA' ? 'Fechar conta' : 'Receber'}</button><button onclick="cancelOrder(${o.id})" aria-label="Cancelar pedido ${o.id}" title="Cancelar pedido" class="text-red-400 text-xs px-1">✕</button>` : ''}</div></td></tr>${expandedOrderId === o.id ? details : ''}`;
             }).join('') || '<tr><td colspan="6" class="p-6 text-center text-gray-500">Nenhum pedido ainda</td></tr>';
             lucide.createIcons();
         }
@@ -2827,13 +3049,7 @@ R$ 130,00
             if (!caixaAberto()) return toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
             const orders = mesaOrders(n);
             if (!orders.length) return toast('Esta mesa não possui pedidos em aberto');
-            const total = orders.reduce((sum, o) => sum + o.total, 0);
-            if (!confirm(`Fechar a conta da Mesa ${n} no valor de ${money(total)}?`)) return;
-            const payment = askPay();
-            if (!payment) return;
-            for (const order of orders) if (!payOrder(order, payment)) return;
-            renderAll();
-            toast(`Mesa ${n} fechada com sucesso`);
+            openPaymentModal(orders, Number(n));
         }
 
         // ---------- Caixa ----------
@@ -3324,7 +3540,7 @@ R$ 130,00
                 payPref: /pix/i.test(payment) ? 'PIX' : /dinheiro/i.test(payment) ? 'Dinheiro' : /cr[eé]dito/i.test(payment) ? 'Cartão de Crédito' : /d[eé]bito/i.test(payment) ? 'Cartão de Débito' : '' };
             if (!finalize(o, 'Pagar depois')) return;
             $('whatsapp-input').value = '';
-            if (qzSettings.automatic) printBothThermal(o);
+            if (qzSettings.automatic && isPrintAgentConnected()) printBothThermal(o);
             switchTab('pedidos');
         }
 
@@ -3456,4 +3672,4 @@ R$ 130,00
 
     </script>
 </body>
-</html> 
+</html>
