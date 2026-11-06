@@ -3195,13 +3195,26 @@ R$ 130,00
             if (type === 'Sangria' && v > caixaResumo(S.caixa).drawerCash) return toast('A sangria não pode ser maior que o dinheiro disponível no caixa.');
             S.caixa.movs.push({ t: Date.now(), type, desc: (prompt('Motivo / descrição:') || type).trim(), pay: 'Dinheiro', v }); renderAll();
         }
-        function printCaixa(c = S.caixa) {
+        async function printCaixa(c = S.caixa) {
             const summary = c.summary || caixaResumo(c);
             const r = (a, b, cls = '') => `<div class="tk-row ${cls}"><span>${a}</span><span>${b}</span></div>`;
             const category = (title, data, includeFee) => `<div class="tk-hr"></div><div class="tk-b">${title}</div>${PAYS.map(pay => r(esc(pay), money(data.byPayment[pay] || 0))).join('')}${r('Valor dos produtos', money(data.products))}${includeFee ? r('Taxa de entrega', money(data.deliveryFee)) : ''}${data.serviceFee ? r('Serviço', money(data.serviceFee)) : ''}${r('Total', money(data.total), 'tk-b')}`;
             const attendants = Object.entries(summary.attendants).sort((a, b) => b[1] - a[1]).map(([name, value]) => r(esc(name), money(value))).join('');
-            $('print-area').innerHTML = `${tkBrand}<div class="tk-c tk-b">RESUMO DO CAIXA</div><div class="tk-c tk-sm">Sessão #${esc(c.id)}</div><div class="tk-c tk-sm">Aberto em ${caixaDateTime(c.at)}</div>${c.closedAt ? `<div class="tk-c tk-sm">Fechado em ${caixaDateTime(c.closedAt)}</div>` : ''}<div class="tk-hr"></div>${r('Saldo inicial', money(c.initial))}${r('Suprimentos', money(summary.supplies))}${r('Sangrias', '- ' + money(summary.withdrawals))}${r('Vendas em dinheiro', money(summary.byPayment.Dinheiro || 0))}${r('Valor em caixa', money(summary.drawerCash), 'tk-b')}${r('Retirado no fechamento', money(c.withdrawal || 0))}${r('Ficou no caixa', money(c.remainingCash ?? summary.drawerCash), 'tk-b')}<div class="tk-hr"></div><div class="tk-b">RESUMO DAS VENDAS</div>${PAYS.map(pay => r(esc(pay), money(summary.byPayment[pay] || 0))).join('')}${r('TOTAL', money(summary.sales), 'tk-tot')}${category('VENDAS DELIVERY', summary.delivery, true)}${category('VENDAS MESAS', summary.tables, false)}${category('VENDAS BALCAO', summary.counter, false)}${attendants ? `<div class="tk-hr"></div><div class="tk-b">VENDAS POR ATENDENTE</div>${attendants}` : ''}${tkEnd}`;
-            window.print();
+            const markup = `${tkBrand}<div class="tk-c tk-b">RESUMO DO CAIXA</div><div class="tk-c tk-sm">Sessão #${esc(c.id)}</div><div class="tk-c tk-sm">Aberto em ${caixaDateTime(c.at)}</div>${c.closedAt ? `<div class="tk-c tk-sm">Fechado em ${caixaDateTime(c.closedAt)}</div>` : ''}<div class="tk-hr"></div>${r('Saldo inicial', money(c.initial))}${r('Suprimentos', money(summary.supplies))}${r('Sangrias', '- ' + money(summary.withdrawals))}${r('Vendas em dinheiro', money(summary.byPayment.Dinheiro || 0))}${r('Valor em caixa', money(summary.drawerCash), 'tk-b')}${r('Retirado no fechamento', money(c.withdrawal || 0))}${r('Ficou no caixa', money(c.remainingCash ?? summary.drawerCash), 'tk-b')}<div class="tk-hr"></div><div class="tk-b">RESUMO DAS VENDAS</div>${PAYS.map(pay => r(esc(pay), money(summary.byPayment[pay] || 0))).join('')}${r('TOTAL', money(summary.sales), 'tk-tot')}${category('VENDAS DELIVERY', summary.delivery, true)}${category('VENDAS MESAS', summary.tables, false)}${category('VENDAS BALCAO', summary.counter, false)}${attendants ? `<div class="tk-hr"></div><div class="tk-b">VENDAS POR ATENDENTE</div>${attendants}` : ''}${tkEnd}`;
+            const printer = qzSettings.sectors.find(sector => sector.id === 'general')?.printerId || qzSettings.cashierPrinter;
+            try {
+                if (!printer) throw new Error('Configure a impressora do setor Geral nas configurações de impressão.');
+                await ensureQzConnected();
+                await sendQzPrint(printer, markup);
+                setQzStatus('Resumo do caixa enviado para a impressora do caixa.');
+                toast('Resumo do caixa enviado para impressão.');
+                return true;
+            } catch (error) {
+                console.error('Falha ao imprimir o resumo do caixa pelo agente:', error);
+                setQzStatus(`Falha na impressão do resumo: ${error.message}`, true);
+                toast(`Não foi possível imprimir o resumo do caixa: ${error.message}`);
+                return false;
+            }
         }
         function printCaixaHistorico(id) {
             const c = S.caixaHistory.find(session => String(session.id) === String(id));
@@ -3316,8 +3329,8 @@ R$ 130,00
             closeCashModal();
             renderAll();
             syncRealtimeOnlineOrders();
-            printCaixa(closed);
             toast(`Caixa ${closed.id} fechado. Abra outro quando quiser iniciar uma nova sessão.`);
+            await printCaixa(closed);
         }
 
         // ---------- Impressão térmica (Elgin i9 - 80mm) ----------
