@@ -18,8 +18,6 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- QZ Tray (impressão direta em impressoras térmicas) -->
-    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js"></script>
     <!-- QR codes opcionais nas vias impressas -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
     
@@ -106,7 +104,33 @@
                 max-height: calc(100vh - 24rem);
             }
         }
+        @media (max-width: 1023px) {
+            #tab-mesas .mesa-layout {
+                display: flex;
+                flex-direction: column;
+            }
+            #tab-mesas #mesa-details {
+                order: -1;
+                width: 100%;
+            }
+            #tab-mesas #mesas-grid {
+                order: 1;
+                width: 100%;
+            }
+        }
         @media (max-width: 767px) {
+            #tab-mesas .mesa-layout {
+                display: flex;
+                flex-direction: column;
+            }
+            #tab-mesas #mesa-details {
+                order: -1;
+                width: 100%;
+            }
+            #tab-mesas #mesas-grid {
+                order: 1;
+                width: 100%;
+            }
             #sidebar {
                 position: fixed;
                 top: 57px;
@@ -150,16 +174,16 @@
                 <span>Tela Cheia</span>
             </button>
             <div class="relative">
-                <button id="qz-connection-button" type="button" onclick="toggleQzConnectionMenu()" aria-label="QZ Tray desconectado" aria-expanded="false" aria-controls="qz-connection-menu" title="QZ Tray desconectado" class="flex items-center gap-2 bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-300 hover:text-white transition">
+                <button id="qz-connection-button" type="button" onclick="toggleQzConnectionMenu()" aria-label="Agente de impressão desconectado" aria-expanded="false" aria-controls="qz-connection-menu" title="Agente de impressão desconectado" class="flex items-center gap-2 bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-300 hover:text-white transition">
                     <i data-lucide="printer" class="w-4 h-4"></i>
                     <span id="qz-connection-indicator" class="w-2.5 h-2.5 rounded-full bg-red-500" aria-hidden="true"></span>
                 </button>
                 <div id="qz-connection-menu" class="hidden absolute right-0 top-full mt-2 z-50 w-64 rounded-xl border border-dark-border bg-dark-card p-3 shadow-xl">
                     <div class="flex items-center gap-2 text-xs text-gray-200">
                         <span id="qz-menu-indicator" class="w-2.5 h-2.5 rounded-full bg-red-500" aria-hidden="true"></span>
-                        <span id="qz-connection-label">QZ Tray desconectado</span>
+                        <span id="qz-connection-label">Agente de impressão desconectado</span>
                     </div>
-                    <p class="mt-2 text-[11px] text-gray-400">Se a impressora demorar para responder, reconecte e atualize a lista de impressoras.</p>
+                    <p class="mt-2 text-[11px] text-gray-400">Se o agente demorar para responder, reconecte e atualize a lista de impressoras.</p>
                     <button id="qz-reconnect-button" type="button" onclick="reconnectQzTray()" class="mt-3 w-full flex items-center justify-center gap-2 rounded-lg bg-gold-500 px-3 py-2 text-xs font-bold text-black hover:bg-gold-600">
                         <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                         <span id="qz-reconnect-label">Reconectar e atualizar</span>
@@ -397,7 +421,7 @@
                         <div id="cart-svc-row" class="hidden border-t border-dark-border pt-2"><div class="flex justify-between items-center text-xs text-gray-300"><label class="flex items-center gap-2"><input id="o-svc" type="checkbox" checked onchange="renderCart()"> Taxa de serviço (<span id="svc-pct"></span>%)</label><span id="cart-svc"></span></div></div>
                         <div class="flex justify-between font-bold text-sm text-gold-400 border-t border-dark-border pt-2"><span>TOTAL</span><span id="cart-total">R$ 0,00</span></div>
                         <select id="o-pay" class="w-full bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200 focus:outline-none focus:border-gold-500"></select>
-                        <label class="flex items-center gap-2 text-xs text-gray-400"><input id="o-print" type="checkbox" checked> Imprimir comanda (QZ Tray: cozinha e caixa)</label>
+                        <label class="flex items-center gap-2 text-xs text-gray-400"><input id="o-print" type="checkbox" checked> Imprimir comanda (cozinha e caixa)</label>
                         <button onclick="createOrder()" class="w-full bg-gold-500 hover:bg-gold-600 text-black font-bold py-2.5 rounded-lg text-xs">FINALIZAR PEDIDO</button>
                     </div>
                 </div>
@@ -413,12 +437,12 @@
                     </div>
                 </details>
                 <details class="bg-dark-card p-4 rounded-xl border border-dark-border">
-                    <summary class="cursor-pointer text-sm font-bold text-white">Impressão • QZ Tray</summary>
+                    <summary class="cursor-pointer text-sm font-bold text-white">Impressão • Agente local</summary>
                     <div class="mt-3 space-y-3">
-                        <p class="text-xs text-gray-400">Configure impressoras, setores e vias na área de configuração. O QZ Tray permite imprimir diretamente sem abrir a janela do navegador.</p>
+                        <p class="text-xs text-gray-400">Configure impressoras, setores e vias na área de configuração. O agente local Java imprime diretamente sem abrir a janela do navegador.</p>
                         <div class="flex flex-wrap items-center gap-2">
                             <button onclick="connectQzTray()" class="px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-xs text-gray-200 hover:border-gold-500">Conectar e buscar impressoras</button>
-                            <span id="qz-status-inline" class="text-xs text-gray-400">QZ Tray não conectado</span>
+                            <span id="qz-status-inline" class="text-xs text-gray-400">Agente de impressão desconectado</span>
                         </div>
                         <button onclick="switchTab('config-impressao')" class="px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-xs text-gray-200 hover:border-gold-500">Abrir configuração de impressão</button>
                     </div>
@@ -444,32 +468,40 @@
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
                             <h3 class="font-bold text-sm text-white">Agente de impressão</h3>
-                            <p class="text-xs text-gray-400 mt-1">O QZ Tray precisa estar instalado e aberto para impressão direta.</p>
+                            <p class="text-xs text-gray-400 mt-1">Abra o Gabryelle Print Agent neste computador para imprimir diretamente.</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <span id="qz-settings-indicator" class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                            <span id="qz-settings-status" class="text-xs text-gray-300">QZ Tray não conectado</span>
+                            <span id="qz-settings-status" class="text-xs text-gray-300">Agente de impressão desconectado</span>
                             <button onclick="connectQzTray()" class="px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-xs text-gray-200 hover:border-gold-500">Atualizar</button>
                         </div>
                     </div>
+                    <div class="space-y-2">
+                        <label for="print-agent-token" class="block text-xs text-gray-300">Token de pareamento do Gabryelle Print Agent</label>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input id="print-agent-token" type="password" autocomplete="off" spellcheck="false" placeholder="Cole o token exibido nas configurações do agente" class="flex-1 bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200">
+                            <button type="button" onclick="savePrintAgentToken()" class="px-3 py-2 rounded-lg bg-gold-500 text-black text-xs font-bold hover:bg-gold-600">Salvar token e conectar</button>
+                        </div>
+                        <p class="text-[10px] text-gray-500">O token fica salvo somente neste navegador. Cadastre também a origem deste sistema na aba Segurança do agente Java.</p>
+                    </div>
                     <label class="flex items-center gap-2 text-xs text-gray-300">
                         <input id="qz-enabled" type="checkbox" onchange="saveQzSettings()">
-                        Ativar impressão automática pelo QZ Tray
+                        Ativar impressão direta pelo agente Java
                     </label>
                     <label class="flex items-center gap-2 text-xs text-gray-300">
                         <input id="qz-automatic" type="checkbox" onchange="saveQzSettings()">
                         Imprimir automaticamente ao lançar novos pedidos
                     </label>
-                    <p id="qz-status" class="text-xs text-gray-400">Conecte ao QZ Tray para listar as impressoras disponíveis.</p>
+                    <p id="qz-status" class="text-xs text-gray-400">Conecte ao agente Java para listar as impressoras disponíveis.</p>
                 </div>
                 <div class="bg-dark-card p-4 rounded-xl border border-dark-border space-y-4">
                     <div>
                         <h3 class="font-bold text-sm text-white">Impressoras</h3>
-                        <p class="text-xs text-gray-400 mt-1">Conecte o QZ Tray, escolha uma impressora encontrada e adicione-a à lista.</p>
+                        <p class="text-xs text-gray-400 mt-1">Conecte o agente Java, escolha uma impressora instalada e adicione-a à lista.</p>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-2">
                         <select id="qz-printer-add-select" class="flex-1 bg-dark-bg border border-dark-border rounded-lg p-2 text-xs text-gray-200">
-                            <option value="">Conecte o QZ Tray para listar impressoras</option>
+                            <option value="">Conecte o agente Java para listar impressoras</option>
                         </select>
                         <button onclick="addConfiguredPrinter()" class="px-3 py-2 rounded-lg bg-gold-500 text-black text-xs font-bold hover:bg-gold-600">Adicionar impressora</button>
                         <button onclick="testQzPrinters()" class="px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-xs text-gray-200 hover:border-gold-500">Testar setores</button>
@@ -681,7 +713,7 @@
                     <span id="close-cash-remaining" class="text-gold-400"></span>
                 </div>
                 <label class="block text-gray-300">Saldo inicial do próximo caixa (R$)
-                    <input id="close-cash-next-initial" type="number" min="0" step="0.01" value="15" class="mt-1 w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-gold-500">
+                    <input id="close-cash-next-initial" type="number" min="0" step="0.01" value="0" class="mt-1 w-full bg-dark-bg border border-dark-border rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-gold-500">
                 </label>
             </div>
             <div class="flex justify-end gap-2 pt-2">
@@ -1601,7 +1633,7 @@ R$ 130,00
         S.menu.promoPrices = S.menu.promoPrices && typeof S.menu.promoPrices === 'object' ? S.menu.promoPrices : {};
         if (S.menu.mf && S.menu.mf.join() === '1,2,2,3') S.menu.mf = [4, 4, 4, 4];
         if (S.menu.svc === undefined) S.menu.svc = 10;
-        S.clientes = S.clientes || []; S.orders = S.orders || []; S.seq = S.seq || 1; S.caixa = S.caixa || newCaixa(); S.caixa.status = S.caixa.status || 'ABERTO'; S.caixaHistory = S.caixaHistory || [];
+        S.clientes = S.clientes || []; S.orders = S.orders || []; S.seq = S.seq || 1; S.caixa = S.caixa || newCaixa(); S.caixa.status = S.caixa.status || 'FECHADO'; S.caixaHistory = S.caixaHistory || [];
         const QZ_SETTINGS_KEY = 'gp_qz_printers_v1';
         const PRINT_ORDER_TYPES = [
             { id: 'DELIVERY', label: 'Delivery' },
@@ -1665,18 +1697,24 @@ R$ 130,00
         let qzAvailablePrinters = [];
         let qzConnectionState = 'disconnected';
         let qzReconnectPending = false;
-        const qzClientId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const remotePrinterHosts = new Map();
-        const REMOTE_QZ_TIMEOUT_MS = 15000;
-        let qzPresenceChannel = null;
-        let qzPresenceTimer = null;
-        let qzPresenceWasConnected = false;
-        let qzPresenceLastSentAt = 0;
+        const PRINT_AGENT_TOKEN_KEY = 'gp_print_agent_token_v1';
+        const PRINT_AGENT_URL = 'ws://127.0.0.1:38182/ws';
+        const printAgentRequests = new Map();
+        let printAgentToken = '';
+        let printAgentSocket = null;
+        let printAgentAuthenticated = false;
+        let printAgentConnectionPromise = null;
+        let printAgentRequestSequence = 0;
         try {
             const storedQzSettings = JSON.parse(localStorage.getItem(QZ_SETTINGS_KEY) || '{}');
             qzSettings = mergeQzSettings(storedQzSettings);
         } catch (error) {
-            console.error('Não foi possível carregar as configurações do QZ Tray:', error);
+            console.error('Não foi possível carregar as configurações de impressão:', error);
+        }
+        try {
+            printAgentToken = localStorage.getItem(PRINT_AGENT_TOKEN_KEY) || '';
+        } catch (error) {
+            console.error('Não foi possível carregar o token do agente de impressão:', error);
         }
         let cart = [], curCat = 'Pizzas', pm = null, selectedMesa = null, selectedCashHistoryId = null, expandedOrderId = null;
 
@@ -1727,7 +1765,7 @@ R$ 130,00
             d.className = 'no-print fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] bg-gold-500 text-black text-xs font-bold px-4 py-2 rounded-lg shadow-xl';
             document.body.appendChild(d); setTimeout(() => d.remove(), 2400);
         }
-        function newCaixa() { return { id: Math.floor(Math.random() * 9e6) + 1e6, at: new Date().toISOString(), initial: 15, movs: [], status: 'ABERTO' }; }
+        function newCaixa() { return { id: Math.floor(Math.random() * 9e6) + 1e6, at: new Date().toISOString(), initial: 0, movs: [], status: 'FECHADO' }; }
 
         function normalizeCaixaState() {
             S.orders = Array.isArray(S.orders) ? S.orders : [];
@@ -1737,7 +1775,7 @@ R$ 130,00
             S.caixaHistory = Array.isArray(S.caixaHistory) ? S.caixaHistory : [];
             S.caixa = S.caixa || newCaixa();
             S.caixa.movs = Array.isArray(S.caixa.movs) ? S.caixa.movs : [];
-            S.caixa.status = S.caixa.status || 'ABERTO';
+            S.caixa.status = S.caixa.status || 'FECHADO';
             if (S.caixa.status !== 'FECHADO') return;
 
             const closed = S.caixa;
@@ -1750,12 +1788,12 @@ R$ 130,00
                 S.caixaHistory.push(archived);
             }
 
-            const nextInitial = Number(closed.nextInitial ?? closed.remainingCash ?? 15);
+            const nextInitial = Number(closed.nextInitial ?? closed.remainingCash ?? 0);
             S.caixa = {
                 ...newCaixa(),
                 status: 'FECHADO',
-                initial: Number.isFinite(nextInitial) && nextInitial >= 0 ? nextInitial : 15,
-                nextInitial: Number.isFinite(nextInitial) && nextInitial >= 0 ? nextInitial : 15
+                initial: Number.isFinite(nextInitial) && nextInitial >= 0 ? nextInitial : 0,
+                nextInitial: Number.isFinite(nextInitial) && nextInitial >= 0 ? nextInitial : 0
             };
         }
 
@@ -1769,25 +1807,15 @@ R$ 130,00
             updateQzConnectionIndicator();
         }
 
-        function isQzConnected() {
-            return typeof qz !== 'undefined' && Boolean(qz.websocket.isActive());
-        }
-
-        function hasRemotePrinterConnection() {
-            const now = Date.now();
-            remotePrinterHosts.forEach((lastSeen, clientId) => {
-                if (now - lastSeen > REMOTE_QZ_TIMEOUT_MS) remotePrinterHosts.delete(clientId);
-            });
-            return remotePrinterHosts.size > 0;
+        function isPrintAgentConnected() {
+            return printAgentAuthenticated && printAgentSocket?.readyState === WebSocket.OPEN;
         }
 
         function updateQzConnectionIndicator() {
-            const localConnected = isQzConnected();
-            const remoteConnected = !localConnected && hasRemotePrinterConnection();
-            qzConnectionState = qzReconnectPending ? 'connecting' : localConnected || remoteConnected ? 'connected' : 'disconnected';
-            const label = qzConnectionState === 'connecting' ? 'Conectando ao QZ Tray...' :
-                localConnected ? 'QZ Tray conectado neste dispositivo' :
-                remoteConnected ? 'Impressora conectada no computador' : 'Impressora desconectada';
+            const connected = isPrintAgentConnected();
+            qzConnectionState = qzReconnectPending ? 'connecting' : connected ? 'connected' : 'disconnected';
+            const label = qzConnectionState === 'connecting' ? 'Conectando ao agente de impressão...' :
+                connected ? 'Agente de impressão conectado neste computador' : 'Agente de impressão desconectado';
             const color = qzConnectionState === 'connecting' ? 'bg-amber-400' :
                 qzConnectionState === 'connected' ? 'bg-emerald-500' : 'bg-red-500';
             const button = $('qz-connection-button');
@@ -1800,7 +1828,7 @@ R$ 130,00
             const settingsLabel = $('qz-settings-status');
             if (settingsLabel) settingsLabel.textContent = label;
             const reconnectLabel = $('qz-reconnect-label');
-            if (reconnectLabel) reconnectLabel.textContent = remoteConnected ? 'Reconectar no computador' : 'Reconectar e atualizar';
+            if (reconnectLabel) reconnectLabel.textContent = 'Reconectar e atualizar';
             ['qz-connection-indicator', 'qz-menu-indicator'].forEach(id => {
                 const indicator = $(id);
                 if (indicator) indicator.className = `w-2.5 h-2.5 rounded-full ${color}${qzConnectionState === 'connected' ? ' animate-pulse' : ''}`;
@@ -1809,43 +1837,145 @@ R$ 130,00
             if (settingsIndicator) settingsIndicator.className = `w-2.5 h-2.5 rounded-full ${color}${qzConnectionState === 'connected' ? ' animate-pulse' : ''}`;
         }
 
-        function initQzPresence() {
-            if (!supabaseClient || qzPresenceChannel) return;
-            qzPresenceChannel = supabaseClient
-                .channel('qz-printer-presence', { config: { private: false } })
-                .on('broadcast', { event: 'printer-status' }, message => {
-                    const payload = message.payload;
-                    if (!payload || payload.clientId === qzClientId) return;
-                    if (payload.connected) remotePrinterHosts.set(payload.clientId, Date.now());
-                    else remotePrinterHosts.delete(payload.clientId);
-                    updateQzConnectionIndicator();
-                })
-                .subscribe(status => {
-                    if (status === 'SUBSCRIBED') publishQzPresence(true);
-                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                        console.warn('Não foi possível compartilhar o status do QZ Tray entre dispositivos.');
-                    }
-                });
-            if (!qzPresenceTimer) qzPresenceTimer = setInterval(() => publishQzPresence(false), 5000);
+        function rejectPrintAgentRequests(error) {
+            printAgentRequests.forEach(request => {
+                clearTimeout(request.timeout);
+                request.reject(error);
+            });
+            printAgentRequests.clear();
         }
 
-        async function publishQzPresence(force) {
-            if (!qzPresenceChannel) return;
-            const connected = isQzConnected();
-            const now = Date.now();
-            if (!force && connected && now - qzPresenceLastSentAt < 5000) return;
-            if (!connected && !qzPresenceWasConnected && !force) return;
+        function connectPrintAgent() {
+            if (isPrintAgentConnected()) return Promise.resolve();
+            if (printAgentConnectionPromise) return printAgentConnectionPromise;
+            if (!printAgentToken) throw new Error('Informe e salve o token de pareamento do agente Java.');
+
+            qzReconnectPending = true;
+            updateQzConnectionIndicator();
+            let resolveConnection, rejectConnection;
+            let settled = false;
+            const connection = new Promise((resolve, reject) => {
+                resolveConnection = resolve;
+                rejectConnection = reject;
+            });
+            const failConnection = error => {
+                if (settled) return;
+                settled = true;
+                rejectConnection(error);
+            };
+            const succeedConnection = () => {
+                if (settled) return;
+                settled = true;
+                resolveConnection();
+            };
+            let socket;
             try {
-                await qzPresenceChannel.send({
-                    type: 'broadcast',
-                    event: 'printer-status',
-                    payload: { clientId: qzClientId, connected }
-                });
-                qzPresenceWasConnected = connected;
-                qzPresenceLastSentAt = now;
+                socket = new WebSocket(PRINT_AGENT_URL);
             } catch (error) {
-                console.error('Falha ao atualizar o status remoto da impressora:', error);
+                qzReconnectPending = false;
+                updateQzConnectionIndicator();
+                throw error;
             }
+            printAgentSocket = socket;
+            const timeout = setTimeout(() => {
+                failConnection(new Error('Tempo esgotado ao conectar ao agente Java. Verifique se ele está aberto.'));
+                socket.close();
+            }, 10000);
+            socket.onmessage = event => {
+                let response;
+                try {
+                    response = JSON.parse(event.data);
+                } catch (error) {
+                    failConnection(new Error('O agente Java enviou uma resposta inválida.'));
+                    socket.close();
+                    return;
+                }
+                if (response.type === 'ready') {
+                    try {
+                        socket.send(JSON.stringify({ type: 'authenticate', token: printAgentToken }));
+                    } catch (error) {
+                        failConnection(new Error(`Não foi possível autenticar no agente Java: ${error.message}`));
+                        socket.close();
+                    }
+                    return;
+                }
+                if (response.type === 'authenticated') {
+                    printAgentAuthenticated = true;
+                    clearTimeout(timeout);
+                    succeedConnection();
+                    setQzStatus('Agente Java conectado.');
+                    updateQzConnectionIndicator();
+                    return;
+                }
+                if (response.type === 'error') {
+                    const error = new Error(response.message || 'O agente Java retornou um erro.');
+                    if (response.requestId && printAgentRequests.has(response.requestId)) {
+                        const request = printAgentRequests.get(response.requestId);
+                        clearTimeout(request.timeout);
+                        printAgentRequests.delete(response.requestId);
+                        request.reject(error);
+                    } else if (!printAgentAuthenticated) {
+                        clearTimeout(timeout);
+                        failConnection(error);
+                        socket.close();
+                    } else {
+                        setQzStatus(error.message, true);
+                        toast(error.message);
+                    }
+                    return;
+                }
+                if (response.type === 'printers-result' || response.type === 'print-result') {
+                    const request = printAgentRequests.get(response.requestId);
+                    if (!request) return;
+                    clearTimeout(request.timeout);
+                    printAgentRequests.delete(response.requestId);
+                    request.resolve(response);
+                }
+            };
+            socket.onerror = () => {
+                failConnection(new Error('Não foi possível conectar ao agente Java em 127.0.0.1:38182.'));
+                socket.close();
+            };
+            socket.onclose = event => {
+                clearTimeout(timeout);
+                if (printAgentSocket === socket) {
+                    printAgentSocket = null;
+                    printAgentAuthenticated = false;
+                    qzReconnectPending = false;
+                    rejectPrintAgentRequests(new Error('A conexão com o agente de impressão foi encerrada.'));
+                    updateQzConnectionIndicator();
+                }
+                if (!settled) {
+                    failConnection(new Error(event.reason || 'A conexão com o agente Java foi recusada.'));
+                }
+            };
+            const managedConnection = connection.finally(() => {
+                clearTimeout(timeout);
+                if (printAgentConnectionPromise === managedConnection) printAgentConnectionPromise = null;
+                qzReconnectPending = false;
+                updateQzConnectionIndicator();
+            });
+            printAgentConnectionPromise = managedConnection;
+            return managedConnection;
+        }
+
+        async function sendPrintAgentCommand(command) {
+            if (!isPrintAgentConnected()) throw new Error('O agente Java não está conectado.');
+            const requestId = `${Date.now()}-${++printAgentRequestSequence}`;
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    printAgentRequests.delete(requestId);
+                    reject(new Error('O agente Java não respondeu a tempo.'));
+                }, 30000);
+                printAgentRequests.set(requestId, { resolve, reject, timeout });
+                try {
+                    printAgentSocket.send(JSON.stringify({ ...command, requestId }));
+                } catch (error) {
+                    clearTimeout(timeout);
+                    printAgentRequests.delete(requestId);
+                    reject(error);
+                }
+            });
         }
 
         function toggleQzConnectionMenu() {
@@ -1911,24 +2041,11 @@ R$ 130,00
             const list = $('qz-printer-list');
             if (!list) return;
             list.innerHTML = qzSettings.printers.map(printer => `
-                <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1.5fr)_minmax(110px,0.7fr)_minmax(130px,0.8fr)_minmax(130px,0.8fr)_auto] gap-2 items-end rounded-lg border border-dark-border bg-dark-bg p-3">
-                    <div class="text-xs font-semibold text-white pb-2">${esc(printer.name)}</div>
-                    <label class="text-[10px] text-gray-400">Colunas
-                        <select onchange="updateConfiguredPrinter('${esc(printer.id)}','columns',this.value)" class="mt-1 w-full bg-dark-card border border-dark-border rounded p-2 text-xs text-gray-200">
-                            ${[32, 42, 48].map(columns => `<option value="${columns}" ${Number(printer.columns) === columns ? 'selected' : ''}>${columns}</option>`).join('')}
-                        </select>
-                    </label>
-                    <label class="text-[10px] text-gray-400">Perfil
-                        <select onchange="updateConfiguredPrinter('${esc(printer.id)}','profile',this.value)" class="mt-1 w-full bg-dark-card border border-dark-border rounded p-2 text-xs text-gray-200">
-                            <option value="58mm" ${printer.profile === '58mm' ? 'selected' : ''}>Térmica 58 mm</option>
-                            <option value="80mm" ${printer.profile !== '58mm' ? 'selected' : ''}>Térmica 80 mm</option>
-                        </select>
-                    </label>
-                    <label class="text-[10px] text-gray-400">Codificação
-                        <select onchange="updateConfiguredPrinter('${esc(printer.id)}','encoding',this.value)" class="mt-1 w-full bg-dark-card border border-dark-border rounded p-2 text-xs text-gray-200">
-                            ${['UTF-8', 'CP860', 'CP850'].map(encoding => `<option ${printer.encoding === encoding ? 'selected' : ''}>${encoding}</option>`).join('')}
-                        </select>
-                    </label>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-dark-border bg-dark-bg p-3">
+                    <div>
+                        <div class="text-xs font-semibold text-white">${esc(printer.name)}</div>
+                        <p class="text-[10px] text-gray-500">Impressão ESC/POS pelo agente Java (IBM 860)</p>
+                    </div>
                     <div class="flex gap-1">
                         <button onclick="testConfiguredPrinter('${esc(printer.id)}')" title="Testar impressora" aria-label="Testar ${esc(printer.name)}" class="rounded border border-dark-border px-2 py-2 text-xs text-gold-400 hover:border-gold-500"><i data-lucide="printer" class="w-4 h-4"></i></button>
                         <button onclick="removeConfiguredPrinter('${esc(printer.id)}')" title="Remover impressora" aria-label="Remover ${esc(printer.name)}" class="rounded border border-dark-border px-2 py-2 text-xs text-red-400 hover:border-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -2015,7 +2132,7 @@ R$ 130,00
             try {
                 localStorage.setItem(QZ_SETTINGS_KEY, JSON.stringify(qzSettings));
             } catch (error) {
-                console.error('Não foi possível salvar as configurações do QZ Tray:', error);
+                console.error('Não foi possível salvar as configurações de impressão:', error);
                 setQzStatus('Não foi possível salvar as configurações.', true);
                 toast('Erro ao salvar as configurações de impressão.');
             }
@@ -2023,7 +2140,7 @@ R$ 130,00
 
         function addConfiguredPrinter() {
             const name = $('qz-printer-add-select').value;
-            if (!name) return toast('Selecione uma impressora encontrada pelo QZ Tray.');
+            if (!name) return toast('Conecte o agente Java e selecione uma impressora encontrada.');
             if (!qzSettings.printers.some(printer => printer.name === name)) {
                 qzSettings.printers.push({ id: name, name, columns: 42, profile: '80mm', encoding: 'UTF-8' });
                 saveQzSettings();
@@ -2137,36 +2254,37 @@ R$ 130,00
             }));
         }
 
-        async function connectQzTray(forceReconnect = false) {
-            if (typeof qz === 'undefined') {
-                setQzStatus('Biblioteca QZ Tray indisponível. Verifique a conexão com a internet.', true);
-                return toast('Não foi possível carregar a biblioteca do QZ Tray.');
-            }
-            qzReconnectPending = true;
-            updateQzConnectionIndicator();
+        async function savePrintAgentToken() {
+            const token = $('print-agent-token').value.trim();
+            if (token.length < 32) return toast('Informe o token de pareamento completo exibido pelo agente Java.');
             try {
-                if (forceReconnect && qz.websocket.isActive()) await qz.websocket.disconnect();
-                if (!qz.websocket.isActive()) await qz.websocket.connect();
-                const printers = await qz.printers.find();
-                renderQzSettings(Array.isArray(printers) ? printers : []);
-                if (!printers.length) throw new Error('QZ Tray conectado, mas nenhuma impressora foi encontrada.');
-                setQzStatus(`${printers.length} impressora(s) encontrada(s).`);
-                toast('QZ Tray conectado. Selecione as impressoras da cozinha e do caixa.');
+                localStorage.setItem(PRINT_AGENT_TOKEN_KEY, token);
+                printAgentToken = token;
+                await connectQzTray();
             } catch (error) {
-                console.error('Falha ao conectar ao QZ Tray:', error);
+                console.error('Falha ao salvar o token do agente de impressão:', error);
                 setQzStatus(`Falha na conexão: ${error.message}`, true);
-                toast(`Não foi possível conectar ao QZ Tray: ${error.message}`);
-            } finally {
-                qzReconnectPending = false;
-                updateQzConnectionIndicator();
+                toast(`Não foi possível conectar ao agente Java: ${error.message}`);
+            }
+        }
+
+        async function connectQzTray() {
+            try {
+                await connectPrintAgent();
+                const response = await sendPrintAgentCommand({ type: 'list-printers' });
+                const printers = Array.isArray(response.printers) ? response.printers : [];
+                renderQzSettings(Array.isArray(printers) ? printers : []);
+                if (!printers.length) throw new Error('O agente Java conectou, mas nenhuma impressora está instalada no Windows.');
+                setQzStatus(`${printers.length} impressora(s) encontrada(s).`);
+                toast('Agente Java conectado. Selecione as impressoras para cada via.');
+            } catch (error) {
+                console.error('Falha ao conectar ao agente de impressão:', error);
+                setQzStatus(`Falha na conexão: ${error.message}`, true);
+                toast(`Não foi possível conectar ao agente Java: ${error.message}`);
             }
         }
 
         async function reconnectQzTray() {
-            if (!isQzConnected() && hasRemotePrinterConnection()) {
-                toast('A impressora está conectada no computador. Reconecte pelo ícone da impressora nesse computador.');
-                return;
-            }
             const button = $('qz-reconnect-button');
             button.disabled = true;
             button.classList.add('opacity-60', 'cursor-wait');
@@ -2179,41 +2297,55 @@ R$ 130,00
         }
 
         async function ensureQzConnected() {
-            if (typeof qz === 'undefined') throw new Error('Biblioteca QZ Tray indisponível.');
-            if (!qz.websocket.isActive()) {
-                qzReconnectPending = true;
-                updateQzConnectionIndicator();
-                try {
-                    await qz.websocket.connect();
-                } finally {
-                    qzReconnectPending = false;
-                    updateQzConnectionIndicator();
-                }
-            }
+            await connectPrintAgent();
         }
 
         async function sendQzPrint(printer, markup) {
-            if (!printer) throw new Error('Selecione uma impressora para cada via antes de ativar o QZ Tray.');
-            const printerSettings = qzSettings.printers.find(item => item.id === printer);
-            const profile = printerSettings?.profile || '80mm';
-            const paper = profile === '58mm' ? '58mm' : '80mm';
-            const width = profile === '58mm' ? '48mm' : '72mm';
-            const columns = Number(printerSettings?.columns) || (profile === '58mm' ? 32 : 42);
-            const fontSize = (12 * 42 / columns).toFixed(1);
-            const config = qz.configs.create(printer, { margins: 0, orientation: 'portrait', encoding: printerSettings?.encoding || 'UTF-8' });
-            const document = `<html><head><meta charset="utf-8"><style>@page{size:${paper} auto;margin:0}body{width:${width};margin:0 auto;padding:2mm 0;font:${fontSize}px/1.3 Arial,Helvetica,sans-serif;color:#000;background:#fff}.tk-c{text-align:center}.tk-b{font-weight:700}.tk-sm{font-size:10px}.tk-brand{font-size:20px;font-weight:900;letter-spacing:1px}.tk-num{font-size:34px;font-weight:900;line-height:1.1}.tk-inv{background:#000;color:#fff;font-weight:900;font-size:18px;padding:3px 0;margin:4px 0;text-align:center}.tk-hr{border-top:1px dashed #000;margin:5px 0}.tk-hr2{border-top:2px solid #000;margin:5px 0}.tk-row{display:flex;justify-content:space-between;gap:6px}.tk-item{font-size:15px;font-weight:900;margin-top:3px}.tk-item-prod{font-size:19px}.tk-det{padding-left:10px;font-size:12px;font-weight:600}.tk-obs{margin:2px 0 0 10px;border:1.5px solid #000;padding:1px 4px;font-weight:900;font-size:12px}.tk-tot{font-size:18px;font-weight:900}</style></head><body>${markup}${'</bo' + 'dy></ht' + 'ml>'}`;
-            return qz.print(config, [{ type: 'html', format: 'plain', data: document }]);
+            if (!printer) throw new Error('Selecione uma impressora para cada via.');
+            const container = document.createElement('div');
+            container.innerHTML = markup;
+            if (container.querySelector('img')) {
+                throw new Error('O agente Java ainda não oferece impressão de QR Code. Desative essa opção nas configurações de impressão.');
+            }
+            const renderNode = node => {
+                if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
+                if (node.nodeType !== Node.ELEMENT_NODE) return '';
+                const element = node;
+                const tag = element.tagName.toLowerCase();
+                if (tag === 'br') return '\n';
+                if (element.classList.contains('tk-hr') || element.classList.contains('tk-hr2')) return '\n--------------------------------\n';
+                if (element.classList.contains('tk-row')) {
+                    return Array.from(element.children).map(renderNode).join('    ') + '\n';
+                }
+                const content = Array.from(element.childNodes).map(renderNode).join('');
+                return ['div', 'p', 'li'].includes(tag) ? `${content}\n` : content;
+            };
+            const text = renderNode(container).replace(/\u00a0/g, ' ')
+                .split(/\r?\n/)
+                .map(line => line.replace(/[ \t]+/g, ' ').trim())
+                .filter(Boolean)
+                .join('\n');
+            const response = await sendPrintAgentCommand({
+                type: 'print',
+                printerName: printer,
+                text,
+                alignment: 'left',
+                bold: false,
+                cut: true
+            });
+            if (response.success !== true) throw new Error('O agente Java não confirmou a impressão.');
+            return response;
         }
 
         normalizeCaixaState();
 
         function initApp() {
             try { const su = JSON.parse(localStorage.getItem('gp_users')); if (su && su.length) users = su; } catch (e) {}
+            $('print-agent-token').value = printAgentToken;
             $('o-mesa').innerHTML = Array.from({ length: TABLE_COUNT }, (_, i) => `<option value="${i + 1}">Mesa ${i + 1}</option>`).join('');
             $('o-pay').innerHTML = ['Pagar depois', ...PAYS].map(p => `<option>${p}</option>`).join('');
             renderQzSettings(); updateQzConnectionIndicator(); onTypeChange(); renderMenu(); renderKDS(); renderCardapioAdmin();
             setInterval(updateQzConnectionIndicator, 2000);
-            initQzPresence();
             $('btn-toggle-sidebar').addEventListener('click', toggleMobileSidebar);
             $('sidebar-backdrop').addEventListener('click', () => setMobileSidebarOpen(false));
             document.addEventListener('click', event => {
@@ -2737,7 +2869,7 @@ R$ 130,00
             if (abertos && !confirm(`Atenção: ${abertos} pedido(s) ainda não recebido(s).\n\nDeseja continuar com o fechamento do caixa?`)) return;
             $('close-cash-expected').textContent = `Valor em caixa esperado: ${money(caixaResumo(S.caixa).drawerCash)}`;
             $('close-cash-withdrawal').value = '0';
-            $('close-cash-next-initial').value = String(S.caixa.nextInitial ?? 15);
+            $('close-cash-next-initial').value = String(S.caixa.nextInitial ?? 0);
             updateCloseCashPreview();
             $('close-cash-modal').classList.remove('hidden');
             $('close-cash-modal').classList.add('flex');
@@ -2759,11 +2891,16 @@ R$ 130,00
             if (cashStatusSyncPending) return toast('Aguarde a sincronização do status do caixa.');
             if (caixaAberto()) return toast('O caixa já está aberto.');
             if (!confirm('Abrir um novo caixa e começar uma nova sessão?')) return;
+            const initialInput = prompt('Qual valor deseja usar como saldo inicial do caixa? (R$)');
+            if (initialInput === null) return;
+            const initial = Number(initialInput.trim().replace(',', '.'));
+            if (!initialInput.trim() || !Number.isFinite(initial) || initial < 0) {
+                return toast('Informe um saldo inicial válido para abrir o caixa.');
+            }
             const previousState = JSON.stringify(S);
             const previousHistorySelection = selectedCashHistoryId;
-            const initial = Number(S.caixa.nextInitial ?? S.caixa.remainingCash ?? 15);
             S.caixa = newCaixa();
-            S.caixa.initial = Number.isFinite(initial) && initial >= 0 ? initial : 15;
+            S.caixa.initial = +initial.toFixed(2);
             S.caixa.status = 'ABERTO';
             selectedCashHistoryId = null;
             cashStatusSyncPending = true;
@@ -2953,7 +3090,7 @@ R$ 130,00
                 await Promise.all(printerIds.map(printer => sendQzPrint(printer, testMarkup)));
                 setQzStatus(`Teste enviado para ${printerIds.length} impressora(s).`);
             } catch (error) {
-                console.error('Falha no teste de impressão QZ Tray:', error);
+                console.error('Falha no teste de impressão pelo agente Java:', error);
                 setQzStatus(`Falha no teste: ${error.message}`, true);
                 toast(`Não foi possível testar as impressoras: ${error.message}`);
             }
