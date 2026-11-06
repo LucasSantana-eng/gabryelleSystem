@@ -960,6 +960,7 @@ R$ 130,00
             const incomingAt = row.updated_at || '';
             if (!force && incomingAt && sharedStateUpdatedAt && Date.parse(incomingAt) <= Date.parse(sharedStateUpdatedAt)) return false;
             const existingOrderIds = new Set((S.orders || []).map(order => String(order.id)));
+            const previouslyPaidOrderIds = new Set((S.orders || []).filter(order => order.paid).map(order => String(order.id)));
             S = row.data;
             S.menu = S.menu || JSON.parse(JSON.stringify(DEF));
             S.menu.cats = S.menu.cats && typeof S.menu.cats === 'object' ? S.menu.cats : {};
@@ -974,6 +975,14 @@ R$ 130,00
             if (!force) {
                 const newOrders = S.orders.filter(order => !existingOrderIds.has(String(order.id)) && order.status !== 'CANCELADO');
                 newOrders.forEach(scheduleRemoteOrderPrint);
+                const newlyReadyOrders = S.orders.filter(order =>
+                    order.paid && order.readyAt && !previouslyPaidOrderIds.has(String(order.id))
+                );
+                if (newlyReadyOrders.length) {
+                    const readyItems = newlyReadyOrders.reduce((count, order) =>
+                        count + (order.items || []).reduce((itemCount, item) => itemCount + (Number(item.qty) || 0), 0), 0);
+                    toast(`${readyItems} produto(s) pronto(s) e removido(s) do KDS.`);
+                }
             }
             return true;
         }
@@ -2485,6 +2494,7 @@ R$ 130,00
             setInterval(() => {
                 if (isPrintAgentConnected()) publishPrintAgentPresence(true);
             }, PRINT_AGENT_PRESENCE_HEARTBEAT_MS);
+            setInterval(updateMesaAgeIndicators, 30000);
             if (printAgentToken) {
                 connectPrintAgent().catch(error => {
                     console.error('Não foi possível conectar automaticamente ao agente de impressão:', error);
@@ -2633,6 +2643,20 @@ R$ 130,00
         // ---------- Pedidos ----------
         const where = o => o.type === 'MESA' ? 'Mesa ' + o.mesa : o.type === 'DELIVERY' ? 'Delivery' : o.serviceType === 'RETIRADA' ? 'Retirada' : 'Balcão';
         const isOrderOpen = order => !order.paid && order.status !== 'CANCELADO';
+        const ORDER_DELAY_MINUTES = 60;
+        function orderCreatedAt(order) {
+            const createdAt = typeof order.at === 'number' ? order.at : Date.parse(order.at);
+            return Number.isFinite(createdAt) ? createdAt : null;
+        }
+        function orderAgeMinutes(order, now = Date.now()) {
+            const createdAt = orderCreatedAt(order);
+            return createdAt === null ? 0 : Math.max(0, Math.floor((now - createdAt) / 60000));
+        }
+        function formatOrderAge(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = minutes % 60;
+            return hours ? `${hours}h ${String(remainingMinutes).padStart(2, '0')}min` : `${minutes} min`;
+        }
         function finalize(o, pay) {
             if (pay && pay !== 'Pagar depois' && !caixaAberto()) {
                 toast('O caixa está fechado. Abra um novo caixa antes de receber pagamentos.');
@@ -2844,6 +2868,8 @@ R$ 130,00
                 order.paymentDetails = orderPayments;
                 order.change = 0;
                 order.paidAt = timestamp;
+                order.status = 'PRONTO';
+                order.readyAt = timestamp;
                 orderPayments.forEach(payment => {
                     const movement = {
                         t: timestamp,
@@ -2867,9 +2893,9 @@ R$ 130,00
             const tableNumber = pendingPaymentTarget.mesaNumber;
             closePaymentModal();
             renderAll();
-            toast(tableNumber === null
-                ? `Pedido recebido. Troco: ${money(result.changeCents / 100)}.`
-                : `Conta da Mesa ${tableNumber} paga. Troco: ${money(result.changeCents / 100)}.`);
+            const readyItems = orders.reduce((count, order) =>
+                count + (order.items || []).reduce((itemCount, item) => itemCount + (Number(item.qty) || 0), 0), 0);
+            toast(`${tableNumber === null ? 'Pedido recebido' : `Conta da Mesa ${tableNumber} paga`}. ${readyItems} produto(s) pronto(s) e removido(s) do KDS. Troco: ${money(result.changeCents / 100)}.`);
         }
         function cancelOrder(id) {
             const order = S.orders.find(item => item.id === id);
@@ -2970,8 +2996,8 @@ R$ 130,00
         function renderKDS() {
             const p = S.orders.filter(o => o.status === 'PENDENTE');
             $('kds-count').textContent = p.length + (p.length === 1 ? ' Pedido Pendente' : ' Pedidos Pendentes');
-            $('kds-cards-container').innerHTML = p.map(o => { const min = Math.floor((Date.now() - o.at) / 60000);
-                return `<div class="bg-dark-card rounded-xl border border-gold-500/40 p-4 space-y-3"><div class="flex justify-between items-center border-b border-dark-border pb-2"><span class="text-lg font-bold text-white">${where(o)} <span class="text-xs text-gray-500">#${o.id}</span></span><span class="text-xs ${min > 25 ? 'bg-red-500/20 text-red-400' : 'bg-gold-500/20 text-gold-400'} px-2 py-0.5 rounded font-mono font-bold">${min} min</span></div><div class="text-xs text-gray-300 space-y-2">${o.items.map(x => `<div><div class="font-bold text-gold-400">${x.qty}x ${esc(x.name)}</div>${x.det.map(d => `<div class="pl-2 border-l-2 border-dark-border text-gray-400">${esc(d)}</div>`).join('')}${x.obs ? `<div class="pl-2 text-amber-400">OBS: ${esc(x.obs)}</div>` : ''}</div>`).join('')}</div><button onclick="kdsDone(${o.id})" class="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-bold py-2 rounded text-xs transition">PRONTO / EXPEDIR</button></div>`; }).join('') || '<p class="text-xs text-gray-500">Nenhum pedido pendente.</p>';
+            $('kds-cards-container').innerHTML = p.map(o => { const min = orderAgeMinutes(o);
+                return `<div class="bg-dark-card rounded-xl border border-gold-500/40 p-4 space-y-3"><div class="flex justify-between items-center border-b border-dark-border pb-2"><span class="text-lg font-bold text-white">${where(o)} <span class="text-xs text-gray-500">#${o.id}</span></span><span class="text-xs ${min > ORDER_DELAY_MINUTES ? 'bg-red-500/20 text-red-400' : 'bg-gold-500/20 text-gold-400'} px-2 py-0.5 rounded font-mono font-bold">${formatOrderAge(min)}</span></div><div class="text-xs text-gray-300 space-y-2">${o.items.map(x => `<div><div class="font-bold text-gold-400">${x.qty}x ${esc(x.name)}</div>${x.det.map(d => `<div class="pl-2 border-l-2 border-dark-border text-gray-400">${esc(d)}</div>`).join('')}${x.obs ? `<div class="pl-2 text-amber-400">OBS: ${esc(x.obs)}</div>` : ''}</div>`).join('')}</div><button onclick="kdsDone(${o.id})" class="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-bold py-2 rounded text-xs transition">PRONTO / EXPEDIR</button></div>`; }).join('') || '<p class="text-xs text-gray-500">Nenhum pedido pendente.</p>';
         }
 
         // ---------- Mesas ----------
@@ -2995,16 +3021,39 @@ R$ 130,00
                 const orders = mesaOrders(number);
                 const occupied = orders.length > 0;
                 const total = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+                const orderStartTimes = orders.map(orderCreatedAt).filter(Number.isFinite);
+                const oldestOrderAt = occupied && orderStartTimes.length ? Math.min(...orderStartTimes) : Date.now();
+                const ageMinutes = occupied ? orderAgeMinutes({ at: oldestOrderAt }) : 0;
+                const delayed = ageMinutes > ORDER_DELAY_MINUTES;
                 const attendants = [...new Set(orders.map(order => order.by).filter(Boolean))];
                 const attendantLabel = attendants.length ? attendants.join(', ') : '';
-                return `<button type="button" onclick="mesaClick(${number})" aria-label="Mesa ${number}, ${occupied ? `aberta, ${orders.length} pedido(s), ${money(total)}` : 'livre'}" aria-pressed="${selectedMesa === number}" class="min-h-24 p-3 rounded-xl border ${occupied ? 'bg-gold-500/10 border-gold-500/60' : 'bg-dark-card border-dark-border'} ${selectedMesa === number ? 'ring-2 ring-gold-400' : ''} flex flex-col items-center justify-center text-center cursor-pointer hover:border-gold-400 transition">
+                return `<button type="button" onclick="mesaClick(${number})" aria-label="Mesa ${number}, ${occupied ? `aberta há ${formatOrderAge(ageMinutes)}, ${orders.length} pedido(s), ${money(total)}${delayed ? ', atrasada' : ''}` : 'livre'}" aria-pressed="${selectedMesa === number}" class="min-h-24 p-3 rounded-xl border ${occupied ? 'bg-gold-500/10 border-gold-500/60' : 'bg-dark-card border-dark-border'} ${delayed ? '!border-red-500/70' : ''} ${selectedMesa === number ? 'ring-2 ring-gold-400' : ''} flex flex-col items-center justify-center text-center cursor-pointer hover:border-gold-400 transition">
                     <span class="text-[10px] uppercase font-bold ${occupied ? 'text-gold-400' : 'text-gray-500'}">MESA</span>
                     <span class="text-xl font-bold text-white">${String(number).padStart(2, '0')}</span>
                     <span class="text-[10px] mt-1 font-semibold ${occupied ? 'text-gold-300' : 'text-emerald-400'}">${occupied ? `ABERTA • ${money(total)}` : 'LIVRE'}</span>
+                    ${occupied ? `<span data-mesa-age="${oldestOrderAt}" class="text-[9px] mt-1 font-semibold ${delayed ? 'text-red-400' : 'text-gray-400'}">${delayed ? 'ATRASADA • ' : ''}${formatOrderAge(ageMinutes)}</span>` : ''}
                     ${occupied ? `<span class="text-[9px] text-gray-400 mt-1">${orders.length} pedido(s)${attendantLabel ? ` • ${esc(attendantLabel)}` : ''}</span>` : ''}
                 </button>`;
             }).join('') || '<p class="col-span-full p-6 text-center text-xs text-gray-500">Nenhuma mesa corresponde ao filtro.</p>';
             renderMesaDetails();
+        }
+        function updateMesaAgeIndicators() {
+            const now = Date.now();
+            document.querySelectorAll('[data-mesa-age]').forEach(indicator => {
+                const minutes = orderAgeMinutes({ at: Number(indicator.dataset.mesaAge) }, now);
+                const delayed = minutes > ORDER_DELAY_MINUTES;
+                indicator.textContent = `${delayed ? 'ATRASADA • ' : ''}${formatOrderAge(minutes)}`;
+                indicator.classList.toggle('text-red-400', delayed);
+                indicator.classList.toggle('text-gray-400', !delayed);
+                indicator.closest('button')?.classList.toggle('!border-red-500/70', delayed);
+            });
+            document.querySelectorAll('[data-order-age]').forEach(indicator => {
+                const minutes = orderAgeMinutes({ at: Number(indicator.dataset.orderAge) }, now);
+                const delayed = minutes > ORDER_DELAY_MINUTES;
+                indicator.textContent = `${delayed ? 'ATRASADO • ' : ''}${formatOrderAge(minutes)}`;
+                indicator.classList.toggle('text-red-400', delayed);
+                indicator.classList.toggle('text-gray-400', !delayed);
+            });
         }
         function mesaClick(n) {
             selectedMesa = n;
@@ -3023,17 +3072,21 @@ R$ 130,00
 
             const orders = mesaOrders(selectedMesa);
             const total = orders.reduce((sum, o) => sum + o.total, 0);
-            const items = orders.map(o => `
+            const items = orders.map(o => {
+                const ageMinutes = orderAgeMinutes(o);
+                const delayed = ageMinutes > ORDER_DELAY_MINUTES;
+                return `
                 <div class="border-t border-dark-border pt-3 space-y-2">
                     <div class="flex justify-between gap-2 text-xs">
                         <span class="font-bold text-white">Pedido #${o.id}</span>
-                        <span class="text-gray-400">${new Date(o.at).toLocaleString('pt-BR')}</span>
+                        <span data-order-age="${orderCreatedAt(o) || Date.now()}" class="text-right ${delayed ? 'text-red-400' : 'text-gray-400'}">${delayed ? 'ATRASADO • ' : ''}${formatOrderAge(ageMinutes)}<span class="block text-gray-500">${new Date(o.at).toLocaleString('pt-BR')}</span></span>
                     </div>
                     <div class="text-[10px] text-gray-500">Atendido por ${esc(o.by || '—')} • ${esc(stLabel(o)[0])}</div>
                     ${o.items.map(x => `<div class="text-xs"><div class="flex justify-between gap-2"><span class="font-semibold text-gray-200">${x.qty}x ${esc(x.name)}</span><span class="text-gold-400 whitespace-nowrap">${money(x.qty * x.price)}</span></div>${x.det.map(d => `<div class="pl-2 text-gray-400">- ${esc(d)}</div>`).join('')}${x.obs ? `<div class="pl-2 text-amber-400">Obs: ${esc(x.obs)}</div>` : ''}</div>`).join('')}
                     ${(o.taxa || o.svc) ? `<div class="space-y-1 border-t border-dark-border pt-2 text-xs">${o.taxa ? `<div class="flex justify-between text-gray-400"><span>Taxa de entrega</span><span>${money(o.taxa)}</span></div>` : ''}${o.svc ? `<div class="flex justify-between text-gray-400"><span>Serviço</span><span>${money(o.svc)}</span></div>` : ''}</div>` : ''}
                     <div class="flex justify-between text-xs font-bold text-white"><span>Total do pedido</span><span>${money(o.total)}</span></div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
 
             panel.innerHTML = `<div class="flex items-center justify-between"><h3 class="font-bold text-sm text-gold-500">MESA ${String(selectedMesa).padStart(2, '0')}</h3><span class="text-[10px] ${orders.length ? 'text-gold-400' : 'text-emerald-400'}">${orders.length ? 'EM ABERTO' : 'LIVRE'}</span></div>
                 ${orders.length ? `<div class="mesa-orders-list max-h-[55vh] overflow-y-auto pr-1 space-y-3">${items}</div><div class="border-t border-dark-border pt-3 flex justify-between font-bold text-white"><span>TOTAL DA CONTA</span><span class="text-gold-400">${money(total)}</span></div>
